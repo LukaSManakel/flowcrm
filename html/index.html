@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowCRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ── SUBSTITUA AS CREDENCIAIS NO SCRIPT NO FINAL DO ARQUIVO ── */
+:root{
+  --bg:#0a0a0f;--bg2:#111118;--bg3:#16161f;--surface:#1c1c28;--surface2:#222232;
+  --border:#2a2a3d;--accent:#6c63ff;--accent2:#9d97ff;--green:#3ecf8e;
+  --danger:#ff5c7a;--warn:#ffb547;--blue:#3b9eff;--purple:#a78bfa;
+  --text:#f0f0f8;--text2:#9999bb;--text3:#55556a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh}
+h1,h2,h3,h4,h5{font-family:'Outfit',sans-serif}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── LOADING ── */
+#loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:16px}
+.loading-logo{font-family:'Outfit',sans-serif;font-size:32px;font-weight:900;color:var(--accent2)}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--text3)}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;flex-direction:column}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px;width:420px;max-width:95vw}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo h1{font-size:28px;font-weight:900;color:var(--accent2);letter-spacing:-1px}
+.login-logo p{font-size:13px;color:var(--text3);margin-top:4px}
+.login-form .form-group{margin-bottom:14px}
+.login-form label{display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.login-form input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:13px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border .15s}
+.login-form input:focus{border-color:var(--accent)}
+.login-form input::placeholder{color:var(--text3)}
+.login-btn{width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.login-btn:hover{background:var(--accent2);transform:translateY(-1px)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.login-error{background:rgba(255,92,122,.1);border:1px solid rgba(255,92,122,.3);border-radius:8px;padding:10px 13px;font-size:13px;color:var(--danger);margin-top:10px;display:none}
+.login-link{text-align:center;margin-top:16px;font-size:13px;color:var(--text3)}
+.login-link a{color:var(--accent2);cursor:pointer;text-decoration:none}
+.login-link a:hover{text-decoration:underline}
+.login-divider{display:flex;align-items:center;gap:10px;margin:16px 0}
+.login-divider span{font-size:11px;color:var(--text3);white-space:nowrap}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── APP ── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:218px;min-width:218px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:10}
+.logo{padding:18px 18px 14px;border-bottom:1px solid var(--border)}
+.logo h2{font-size:17px;font-weight:800;color:var(--accent2);letter-spacing:-.5px}
+.logo span{font-size:10px;color:var(--text3);display:block;margin-top:1px}
+.nav{padding:8px 0;flex:1;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:10px 18px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 18px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all .15s;border-left:2px solid transparent;white-space:nowrap;user-select:none}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--accent2);border-left-color:var(--accent);background:rgba(108,99,255,.09);font-weight:600}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;border-radius:10px;padding:1px 7px;font-weight:700}
+.nav-badge.green{background:var(--green);color:#0a0a0f}
+.nav-badge.orange{background:var(--warn);color:#0a0a0f}
+.sidebar-footer{padding:12px 18px;border-top:1px solid var(--border);flex-shrink:0}
+.user-pill{display:flex;align-items:center;gap:9px;cursor:pointer;padding:8px;border-radius:10px;transition:background .15s;position:relative}
+.user-pill:hover{background:var(--surface)}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+.user-info strong{display:block;font-weight:600;color:var(--text);font-size:13px;line-height:1.2}
+.user-info span{color:var(--text3);font-size:11px}
+.user-menu{position:absolute;bottom:60px;left:8px;right:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:8px;display:none;z-index:100;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.user-menu.open{display:block}
+.um-item{padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:9px;transition:all .15s}
+.um-item:hover{background:var(--surface);color:var(--text)}
+.um-item.danger{color:var(--danger)}
+.um-divider{height:1px;background:var(--border);margin:6px 0}
+
+/* ── MAIN ── */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.topbar{height:54px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text);flex:1}
+.topbar-search{flex:1;max-width:280px;position:relative}
+.topbar-search input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 32px;font-size:12.5px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border .15s}
+.topbar-search input:focus{border-color:var(--accent)}
+.topbar-search::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;pointer-events:none}
+.content{flex:1;overflow-y:auto;padding:20px 22px}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.role-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.role-admin{background:rgba(255,92,122,.15);color:var(--danger);border:1px solid rgba(255,92,122,.3)}
+.role-partner{background:rgba(255,181,71,.15);color:var(--warn);border:1px solid rgba(255,181,71,.3)}
+.role-client{background:rgba(62,207,142,.15);color:var(--green);border:1px solid rgba(62,207,142,.3)}
+
+/* ── BUTTONS ── */
+.btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-green{background:var(--green);color:#0a0a0f;font-weight:700}
+.btn-green:hover{filter:brightness(1.1)}
+.btn-danger{background:rgba(255,92,122,.12);color:var(--danger);border:1px solid rgba(255,92,122,.3)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stats-row.c3{grid-template-columns:repeat(3,1fr)}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden;cursor:pointer;transition:transform .15s}
+.stat-card:hover{transform:translateY(-2px)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.purple::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.stat-card.green::before{background:linear-gradient(90deg,var(--green),#2dd4bf)}
+.stat-card.orange::before{background:linear-gradient(90deg,var(--warn),#ff9a3c)}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--blue),#60b8ff)}
+.stat-card.red::before{background:linear-gradient(90deg,var(--danger),#ff8c9e)}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px}
+.stat-value{font-size:26px;font-weight:800;font-family:'Outfit',sans-serif;color:var(--text);font-variant-numeric:tabular-nums;line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:5px}
+.stat-up{color:var(--green)}
+
+/* ── KANBAN ── */
+.kanban-wrap{overflow-x:auto;overflow-y:hidden;padding-bottom:12px}
+.kanban-board{display:inline-flex;gap:14px;min-height:calc(100vh - 165px);align-items:flex-start;padding:2px}
+.kanban-col{width:258px;min-width:258px;background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;max-height:calc(100vh - 169px)}
+.col-head{padding:12px 14px 8px;flex-shrink:0}
+.col-header{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.col-title{font-size:13px;font-weight:700;color:var(--text);flex:1}
+.col-count{background:var(--surface2);color:var(--text2);font-size:11px;border-radius:10px;padding:2px 8px;font-family:'Outfit',sans-serif;font-weight:600}
+.col-total{font-size:11px;color:var(--text3);margin-top:2px;font-variant-numeric:tabular-nums}
+.col-cards{flex:1;overflow-y:auto;padding:0 8px 8px;display:flex;flex-direction:column;gap:8px;min-height:60px}
+.col-cards.drag-over{background:rgba(108,99,255,.06);border-radius:8px}
+.kanban-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:grab;transition:all .15s;user-select:none}
+.kanban-card:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(108,99,255,.15);transform:translateY(-1px)}
+.kanban-card.dragging{opacity:.4;transform:rotate(2deg) scale(1.03);cursor:grabbing}
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.mini-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif}
+.card-name{font-size:13px;font-weight:600;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-value{font-size:11px;color:var(--green);font-weight:700;font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums}
+.card-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap}
+.tag-purple{background:rgba(108,99,255,.2);color:var(--accent2)}
+.tag-green{background:rgba(62,207,142,.2);color:var(--green)}
+.tag-orange{background:rgba(255,181,71,.2);color:var(--warn)}
+.tag-red{background:rgba(255,92,122,.2);color:var(--danger)}
+.tag-blue{background:rgba(59,158,255,.2);color:var(--blue)}
+.card-footer{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
+.card-footer .sep{width:3px;height:3px;border-radius:50%;background:var(--text3)}
+.col-add-btn{margin:0 8px 8px;padding:7px;border-radius:8px;border:1px dashed var(--border);background:transparent;color:var(--text3);font-size:12px;cursor:pointer;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;flex-shrink:0}
+.col-add-btn:hover{border-color:var(--accent);color:var(--accent2);background:rgba(108,99,255,.05)}
+
+/* ── INBOX ── */
+.inbox-layout{display:grid;grid-template-columns:290px 1fr;border:1px solid var(--border);border-radius:12px;overflow:hidden;height:calc(100vh - 110px)}
+.inbox-list{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.inbox-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.inbox-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;color:var(--text3);transition:all .15s;border-bottom:2px solid transparent}
+.inbox-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.inbox-search{padding:10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.inbox-search input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 11px;font-size:12px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;outline:none}
+.inbox-search input::placeholder{color:var(--text3)}
+.convo-list{flex:1;overflow-y:auto}
+.convo-item{padding:11px 14px;border-bottom:1px solid rgba(42,42,61,.5);cursor:pointer;transition:background .1s;display:flex;gap:9px;align-items:flex-start}
+.convo-item:hover{background:var(--surface2)}
+.convo-item.active{background:rgba(108,99,255,.1);border-left:2px solid var(--accent)}
+.convo-info{flex:1;min-width:0}
+.convo-name-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.convo-name{font-size:13px;font-weight:600;color:var(--text)}
+.convo-time{font-size:10px;color:var(--text3)}
+.convo-preview{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px}
+.chat-area{display:flex;flex-direction:column;background:var(--bg3)}
+.chat-header{padding:12px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.chat-header-info h4{font-size:14px;font-weight:700;color:var(--text)}
+.chat-header-info p{font-size:11px;color:var(--text3)}
+.chat-actions{margin-left:auto;display:flex;gap:6px}
+.chat-messages{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:72%}
+.msg.in{align-self:flex-start}
+.msg.out{align-self:flex-end}
+.msg.ai-msg{align-self:flex-start}
+.msg-bubble{padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.55}
+.msg.in .msg-bubble{background:var(--surface);color:var(--text);border-bottom-left-radius:3px}
+.msg.out .msg-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:3px}
+.msg.ai-msg .msg-bubble{background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.22);color:var(--text);border-bottom-left-radius:3px}
+.msg-time{font-size:10px;color:var(--text3);margin-top:3px;padding:0 3px}
+.msg.out .msg-time{text-align:right}
+.ai-label{font-size:10px;color:var(--green);font-weight:700;margin-bottom:3px}
+.chat-input-area{padding:14px 18px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;flex-shrink:0}
+.chat-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;outline:none;resize:none;min-height:40px;max-height:100px;transition:border .15s}
+.chat-input:focus{border-color:var(--accent)}
+.chat-input::placeholder{color:var(--text3)}
+
+/* ── TABLES ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;padding:10px 16px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.data-table td{padding:11px 16px;font-size:13px;color:var(--text2);border-bottom:1px solid rgba(42,42,61,.4);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,.015);cursor:pointer}
+.td-name{display:flex;align-items:center;gap:9px;color:var(--text);font-weight:500}
+.stage-chip{padding:3px 9px;border-radius:5px;font-size:11px;font-weight:700}
+.td-actions{display:flex;gap:5px}
+
+/* ── FORMS ── */
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border .15s}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--text3)}
+select.form-input{appearance:none;cursor:pointer}
+textarea.form-input{resize:vertical;min-height:80px;line-height:1.5}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:26px;width:480px;max-width:95vw;max-height:92vh;overflow-y:auto;animation:mIn .2s ease}
+.modal.lg{width:600px}
+@keyframes mIn{from{opacity:0;transform:scale(.95) translateY(-10px)}to{opacity:1;transform:none}}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.modal-header h3{font-size:18px;font-weight:800;color:var(--text)}
+.modal-header p{font-size:13px;color:var(--text2);margin-top:3px}
+.modal-close{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:0;margin-left:16px;flex-shrink:0}
+.modal-close:hover{color:var(--text)}
+.modal-footer{display:flex;gap:8px;margin-top:22px;justify-content:flex-end}
+.detail-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.detail-section:last-child{border:none;margin:0;padding:0}
+.detail-section h5{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.history-item{display:flex;gap:10px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.5}
+.history-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0;margin-top:4px}
+.history-dot.green{background:var(--green)}
+.history-dot.blue{background:var(--blue)}
+.history-dot.purple{background:var(--accent)}
+
+/* ── SETTINGS ── */
+.settings-layout{display:grid;grid-template-columns:200px 1fr;gap:20px;min-height:calc(100vh - 140px)}
+.settings-nav{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;height:fit-content}
+.settings-nav-item{padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:9px;transition:all .15s;font-weight:500}
+.settings-nav-item:hover{background:var(--surface2);color:var(--text)}
+.settings-nav-item.active{background:rgba(108,99,255,.12);color:var(--accent2);font-weight:600}
+.settings-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.settings-panel h3{font-size:17px;font-weight:800;color:var(--text);margin-bottom:4px}
+.settings-panel>p{font-size:13px;color:var(--text2);margin-bottom:24px}
+.settings-section{margin-bottom:28px;padding-bottom:28px;border-bottom:1px solid var(--border)}
+.settings-section:last-child{border:none;margin:0;padding:0}
+.settings-section h4{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(42,42,61,.4)}
+.toggle-row:last-child{border:none}
+.toggle-row-info strong{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.toggle-row-info span{font-size:12px;color:var(--text3)}
+.toggle{position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;flex-shrink:0}
+.toggle input{display:none}
+.toggle-slider{position:absolute;inset:0;border-radius:11px;background:var(--surface2);transition:.2s;border:1px solid var(--border)}
+.toggle input:checked+.toggle-slider{background:var(--accent);border-color:var(--accent)}
+.toggle-slider::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
+.toggle input:checked+.toggle-slider::after{transform:translateX(18px)}
+.color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.color-swatch:hover,.color-swatch.active{transform:scale(1.15);border-color:#fff}
+
+/* ── ADMIN ── */
+.admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.admin-tab{padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text3);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.admin-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.admin-tab-content{display:none}
+.admin-tab-content.active{display:block}
+.user-row-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:border .15s}
+.user-row-card:hover{border-color:var(--accent)}
+.revenue-bar{background:var(--surface2);border-radius:4px;height:6px;margin-top:4px;overflow:hidden}
+.revenue-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--green))}
+
+/* ── PARTNER ── */
+.partner-client-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.partner-client-card:hover{border-color:var(--accent);transform:translateX(2px)}
+.pcc-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pcc-name{font-size:14px;font-weight:700;color:var(--text);flex:1}
+.pcc-stats{display:flex;gap:16px;font-size:12px;color:var(--text3);flex-wrap:wrap;align-items:center}
+.pcc-stat .v{font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--text);display:block;font-variant-numeric:tabular-nums}
+
+/* ── CALENDAR ── */
+.agenda-layout{display:grid;grid-template-columns:1fr 320px;gap:16px}
+.cal-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-nav h4{font-size:15px;font-weight:700;color:var(--text)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-dh{text-align:center;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;padding:5px 0}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--text2);transition:all .15s;position:relative;font-family:'Outfit',sans-serif;font-weight:500}
+.cal-day:hover{background:var(--surface2);color:var(--text)}
+.cal-day.today{background:rgba(108,99,255,.2);color:var(--accent2);font-weight:700}
+.cal-day.selected{background:var(--accent);color:#fff;font-weight:700}
+.cal-day.has-ev::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);position:absolute;bottom:3px}
+.cal-day.empty{pointer-events:none;opacity:0}
+.events-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.event-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.event-item:hover{border-color:var(--accent)}
+.event-item.gcal{border-left-color:var(--green)}
+.event-item.manual{border-left-color:var(--blue)}
+.event-time{font-size:12px;font-weight:700;color:var(--accent2);font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums;margin-bottom:3px}
+.event-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.gcal-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.3);padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
+
+/* ── MISC ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-header h3{font-size:16px;font-weight:700;color:var(--text)}
+.empty-state{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+.empty-state .ei{font-size:32px;margin-bottom:10px}
+.activity-feed{display:flex;flex-direction:column}
+.act-item{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(42,42,61,.4)}
+.act-item:last-child{border:none}
+.act-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.act-text{flex:1;font-size:13px;color:var(--text2);line-height:1.45}
+.act-text strong{color:var(--text)}
+.act-time{font-size:11px;color:var(--text3);flex-shrink:0}
+.rep-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px}
+.rep-card h4{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px}
+.bar-chart{display:flex;align-items:flex-end;gap:7px;height:110px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+.bar{width:100%;border-radius:5px 5px 0 0;cursor:pointer}
+.bar:hover{filter:brightness(1.2)}
+.bar-lbl{font-size:10px;color:var(--text3)}
+.bar-val{font-size:10px;color:var(--text2);font-weight:700;font-family:'Outfit',sans-serif}
+.prog-row{margin-bottom:10px}
+.prog-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:5px}
+.prog-label strong{color:var(--text);font-family:'Outfit',sans-serif;font-variant-numeric:tabular-nums}
+.prog-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.int-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .15s;text-align:center}
+.int-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.int-card.connected{border-color:rgba(62,207,142,.35)}
+.notif-banner{background:linear-gradient(135deg,rgba(62,207,142,.08),rgba(108,99,255,.08));border:1px solid rgba(62,207,142,.25);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+.nb-icon{font-size:22px;flex-shrink:0}
+.nb-text h4{font-size:13px;font-weight:700;color:var(--green);margin-bottom:2px}
+.nb-text p{font-size:12px;color:var(--text2)}
+.auto-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.auto-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border .15s}
+.auto-card.highlight{border-color:rgba(62,207,142,.35)}
+.auto-card:hover{border-color:var(--accent)}
+.flow-chip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;color:var(--text2);font-size:11px}
+
+/* ── TOAST ── */
+#toasts{position:fixed;bottom:22px;right:22px;z-index:99999;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toast{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 15px;font-size:13px;color:var(--text);display:flex;align-items:center;gap:9px;max-width:320px;animation:tIn .25s ease;pointer-events:all}
+.toast.success{border-left:3px solid var(--green)}
+.toast.info{border-left:3px solid var(--accent)}
+.toast.warn{border-left:3px solid var(--warn)}
+.toast.error{border-left:3px solid var(--danger)}
+@keyframes tIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-logo">FlowCRM</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Verificando sessão...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>FlowCRM</h1>
+      <p>CRM · IA · Automação</p>
+    </div>
+    <div class="login-form" id="login-form-area">
+      <div class="form-group"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="form-group"><label>Senha</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="login-error" id="login-error"></div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()"><span id="login-btn-text">Entrar no FlowCRM</span></button>
+      <div class="login-divider"><span>ou</span></div>
+      <button class="login-btn" style="background:var(--surface);color:var(--text2);border:1px solid var(--border)" onclick="showRegister()">Criar conta</button>
+    </div>
+    <div class="login-form" id="register-form-area" style="display:none">
+      <div class="form-group"><label>Nome completo</label><input type="text" id="reg-name" placeholder="Seu nome"></div>
+      <div class="form-group"><label>E-mail</label><input type="email" id="reg-email" placeholder="seu@email.com"></div>
+      <div class="form-group"><label>Senha (mín. 6 caracteres)</label><input type="password" id="reg-pass" placeholder="••••••••"></div>
+      <div class="form-group"><label>Empresa (opcional)</label><input type="text" id="reg-company" placeholder="Nome da empresa"></div>
+      <div class="login-error" id="reg-error"></div>
+      <button class="login-btn" id="reg-btn" onclick="doRegister()">Criar conta</button>
+      <div class="login-divider"><span>ou</span></div>
+      <button class="login-btn" style="background:var(--surface);color:var(--text2);border:1px solid var(--border)" onclick="showLogin()">Já tenho conta</button>
+    </div>
+    <div class="login-link" id="forgot-link">
+      <a onclick="showForgot()">Esqueceu a senha?</a>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="logo"><h2>FlowCRM</h2><span id="sidebar-sub">CRM · IA · Automação</span></div>
+    <nav class="nav" id="main-nav"></nav>
+    <div class="sidebar-footer">
+      <div class="user-pill" onclick="toggleUserMenu()" id="user-pill">
+        <div class="avatar" id="user-avatar" style="background:linear-gradient(135deg,#6c63ff,#3ecf8e)">?</div>
+        <div class="user-info"><strong id="user-name">...</strong><span id="user-role-label">...</span></div>
+      </div>
+      <div class="user-menu" id="user-menu">
+        <div class="um-item" onclick="switchTab('settings');closeUserMenu()"><span>⚙️</span> Configurações</div>
+        <div class="um-item" onclick="switchTab('profile');closeUserMenu()"><span>👤</span> Meu Perfil</div>
+        <div class="um-divider"></div>
+        <div class="um-item danger" onclick="doLogout()"><span>🚪</span> Sair</div>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-search"><input type="text" placeholder="Buscar leads, conversas..." oninput="globalSearch(this.value)"></div>
+      <span id="topbar-role-badge" class="role-badge role-client"></span>
+      <button class="btn btn-ghost btn-sm" id="btn-new-contact" onclick="openModal('newContact')">+ Contato</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('newDeal')">+ Negócio</button>
+    </div>
+    <div class="content" id="main-content"></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-dealDetail">
+  <div class="modal lg">
+    <div class="modal-header"><div><h3 id="dd-name">Lead</h3><p id="dd-sub"></p></div><button class="modal-close" onclick="closeModal('dealDetail')">×</button></div>
+    <div class="detail-section"><h5>Informações</h5>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor</label><input class="form-input" id="dd-value" placeholder="R$ 0,00"></div>
+        <div class="form-group"><label class="form-label">Etapa</label>
+          <select class="form-input" id="dd-stage"><option>Entrada / Qualificação</option><option>Em Agendamento</option><option>Follow Up</option><option>Reunião Agendada</option><option>No-Show</option><option>Ganho ✓</option><option>Perdido ✗</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label class="form-label">Telefone</label><div id="dd-phone" style="font-size:13px;color:var(--text2);padding:4px 0"></div></div>
+        <div><label class="form-label">Canal</label><div id="dd-channel" style="font-size:13px;color:var(--text2);padding:4px 0"></div></div>
+      </div>
+    </div>
+    <div class="detail-section"><h5>Tags</h5>
+      <div id="dd-tags" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <div style="display:flex;gap:7px"><input type="text" class="form-input" id="dd-tag-input" placeholder="Nova tag..." onkeydown="if(event.key==='Enter')addTagToDeal()"><button class="btn btn-ghost btn-sm" onclick="addTagToDeal()">+ Tag</button></div>
+    </div>
+    <div class="detail-section"><h5>Histórico</h5><div id="dd-history"></div></div>
+    <div class="detail-section"><h5>Nova Anotação</h5><textarea class="form-input" id="dd-note" placeholder="Anotação sobre este lead..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('dealDetail')">Fechar</button>
+      <button class="btn btn-ghost btn-sm" onclick="openScheduleFromDeal()">🗓️ Agendar</button>
+      <button class="btn btn-primary" onclick="saveDeal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-newDeal">
+  <div class="modal">
+    <div class="modal-header"><div><h3>Novo Negócio</h3></div><button class="modal-close" onclick="closeModal('newDeal')">×</button></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="nd-name" placeholder="Nome do lead"></div><div class="form-group"><label class="form-label">Empresa</label><input class="form-input" id="nd-company" placeholder="Empresa"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="nd-phone" placeholder="+55 11 9 0000-0000"></div><div class="form-group"><label class="form-label">Valor</label><input class="form-input" id="nd-value" placeholder="R$ 0,00"></div></div>
+    <div class="form-group"><label class="form-label">Etapa</label><select class="form-input" id="nd-stage"><option>Entrada / Qualificação</option><option>Em Agendamento</option><option>Follow Up</option><option>Reunião Agendada</option></select></div>
+    <div class="form-group"><label class="form-label">Canal</label><select class="form-input" id="nd-channel"><option>📱 WhatsApp</option><option>📸 Instagram</option><option>📧 E-mail</option><option>🌐 Formulário</option></select></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('newDeal')">Cancelar</button><button class="btn btn-primary" onclick="createDeal()">Criar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-newContact">
+  <div class="modal">
+    <div class="modal-header"><div><h3>Novo Contato</h3></div><button class="modal-close" onclick="closeModal('newContact')">×</button></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="nc-name" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">Empresa</label><input class="form-input" id="nc-company" placeholder="Empresa"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" id="nc-phone" placeholder="+55 11 9 0000-0000"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="nc-email" placeholder="email@empresa.com"></div></div>
+    <div class="form-group"><label class="form-label">Tags (vírgula)</label><input class="form-input" id="nc-tags" placeholder="ICP, MQL, Follow"></div>
+    <div class="form-group"><label class="form-label">Canal</label><select class="form-input" id="nc-channel"><option>📱 WhatsApp</option><option>📸 Instagram</option><option>📧 E-mail</option><option>🌐 Formulário</option></select></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('newContact')">Cancelar</button><button class="btn btn-primary" onclick="createContact()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-scheduleNew">
+  <div class="modal">
+    <div class="modal-header"><div><h3>🗓️ Agendar Reunião</h3></div><button class="modal-close" onclick="closeModal('scheduleNew')">×</button></div>
+    <div class="form-group"><label class="form-label">Contato</label><input class="form-input" id="sch-contact" placeholder="Nome do lead"></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="sch-date"></div><div class="form-group"><label class="form-label">Horário</label><input type="time" class="form-input" id="sch-time" value="10:00"></div></div>
+    <div class="form-group"><label class="form-label">Tipo</label><select class="form-input" id="sch-type"><option>Demo (30 min)</option><option>Reunião comercial (1h)</option><option>Onboarding (45 min)</option><option>Follow-up (15 min)</option></select></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('scheduleNew')">Cancelar</button><button class="btn btn-ghost" onclick="scheduleManual()">📅 Agendar Direto</button><button class="btn btn-green" onclick="scheduleViaWpp()">📲 Enviar WhatsApp</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-newTicket">
+  <div class="modal">
+    <div class="modal-header"><div><h3>🎫 Abrir Ticket</h3></div><button class="modal-close" onclick="closeModal('newTicket')">×</button></div>
+    <div class="form-group"><label class="form-label">Assunto *</label><input class="form-input" id="tk-subject" placeholder="Assunto do atendimento"></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Departamento</label><select class="form-input"><option>Vendas</option><option>Suporte</option><option>Financeiro</option><option>Retenção</option></select></div><div class="form-group"><label class="form-label">Prioridade</label><select class="form-input"><option>Normal</option><option>Alta</option><option>Urgente</option></select></div></div>
+    <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-input" placeholder="Detalhes..."></textarea></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('newTicket')">Cancelar</button><button class="btn btn-primary" onclick="createTicket()">Abrir</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-newAuto">
+  <div class="modal">
+    <div class="modal-header"><div><h3>🔁 Nova Automação</h3></div><button class="modal-close" onclick="closeModal('newAuto')">×</button></div>
+    <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="na-name" placeholder="Nome da automação"></div>
+    <div class="form-group"><label class="form-label">Gatilho</label><select class="form-input" id="na-trigger"><option>Primeira mensagem WhatsApp</option><option>Confirmação de horário</option><option>Tag adicionada</option><option>Compra confirmada</option><option>Comentário Instagram</option><option>Lead inativo 2 dias</option></select></div>
+    <div class="form-group"><label class="form-label">Ação</label><select class="form-input" id="na-action"><option>Enviar mensagem WhatsApp</option><option>Criar evento Google Calendar</option><option>Mover card no CRM</option><option>Aplicar tag</option><option>Criar ticket</option></select></div>
+    <div class="form-group"><label class="form-label">Mensagem</label><textarea class="form-input" id="na-msg" placeholder="Olá {{nome}}! ..."></textarea></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('newAuto')">Cancelar</button><button class="btn btn-primary" onclick="createAuto()">Criar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-trainAI">
+  <div class="modal">
+    <div class="modal-header"><div><h3>✦ Treinar Agente IA</h3></div><button class="modal-close" onclick="closeModal('trainAI')">×</button></div>
+    <div class="form-group"><label class="form-label">Nome do Agente</label><input class="form-input" id="ai-agent-name" placeholder="Ex: Sofia, Max..."></div>
+    <div class="form-group"><label class="form-label">Tom de Voz</label><select class="form-input"><option>Profissional e direto</option><option>Amigável e descontraído</option><option>Técnico e detalhado</option><option>Vendedor energético</option></select></div>
+    <div class="form-group"><label class="form-label">Instruções</label><textarea class="form-input" style="min-height:110px">Você é um agente de IA da FlowCRM. Qualifique leads, responda dúvidas e agende demos. Quando o cliente confirmar horário, acione o Google Calendar automaticamente.</textarea></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('trainAI')">Cancelar</button><button class="btn btn-primary" onclick="closeModal('trainAI');toast('✦ Agente IA treinado!','success')">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-addUser">
+  <div class="modal">
+    <div class="modal-header"><div><h3 id="add-user-title">Convidar Usuário</h3><p>Um e-mail de convite será enviado</p></div><button class="modal-close" onclick="closeModal('addUser')">×</button></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="au-name" placeholder="Nome completo"></div><div class="form-group"><label class="form-label">E-mail *</label><input class="form-input" id="au-email" placeholder="email@empresa.com"></div></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Role</label><select class="form-input" id="au-role"><option value="client">👤 Cliente</option><option value="partner">🤝 Parceiro</option></select></div>
+      <div class="form-group"><label class="form-label">Plano</label><select class="form-input" id="au-plan"><option>Básico — R$97/mês</option><option>Pro — R$197/mês</option><option>Enterprise — R$497/mês</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Empresa</label><input class="form-input" id="au-company" placeholder="Nome da empresa"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('addUser')">Cancelar</button><button class="btn btn-primary" onclick="adminCreateUser()">Criar & Convidar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-addPartnerClient">
+  <div class="modal">
+    <div class="modal-header"><div><h3>Adicionar Cliente</h3></div><button class="modal-close" onclick="closeModal('addPartnerClient')">×</button></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="pc-name" placeholder="Nome da empresa"></div><div class="form-group"><label class="form-label">Responsável</label><input class="form-input" id="pc-contact" placeholder="Nome do contato"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="pc-email" placeholder="email@empresa.com"></div><div class="form-group"><label class="form-label">Plano</label><select class="form-input" id="pc-plan"><option>Básico — R$97/mês</option><option>Pro — R$197/mês</option><option>Enterprise — R$497/mês</option></select></div></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('addPartnerClient')">Cancelar</button><button class="btn btn-primary" onclick="savePartnerClient()">Adicionar</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// ⚠️  SUBSTITUA AQUI SUAS CREDENCIAIS DO SUPABASE
+// ════════════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://pcgcktamqrabuyjmkdxf.supabase.co';          // ex: https://xyzxyz.supabase.co
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjZ2NrdGFtcXJhYnV5am1rZHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxOTMxNTYsImV4cCI6MjA4OTc2OTE1Nn0.TxPVdQbuRzHqaT5CymEdgDYqlZ6ync0jt576ju1EFfw';     // começa com eyJ...
+const ADMIN_EMAIL   = 'vallelukas@outlook.com.br'; // único e-mail com role admin
+// ════════════════════════════════════════════════════════════════
+
+// ── Verifica se as credenciais foram configuradas ─────────────────
+const CONFIGURED = SUPABASE_URL !== 'https://pcgcktamqrabuyjmkdxf.supabase.co' && SUPABASE_ANON !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjZ2NrdGFtcXJhYnV5am1rZHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxOTMxNTYsImV4cCI6MjA4OTc2OTE1Nn0.TxPVdQbuRzHqaT5CymEdgDYqlZ6ync0jt576ju1EFfw'
+  && SUPABASE_URL.startsWith('https://') && SUPABASE_ANON.startsWith('eyJ');
+
+if (!CONFIGURED) {
+  // Mostra tela de configuração e para tudo
+  document.getElementById('loading-screen').style.display = 'none';
+  document.body.insertAdjacentHTML('beforeend', `
+    <div style="position:fixed;inset:0;background:#0a0a0f;display:flex;align-items:center;justify-content:center;z-index:99999">
+      <div style="background:#111118;border:1px solid #2a2a3d;border-radius:20px;padding:40px;width:520px;max-width:95vw;font-family:'Plus Jakarta Sans',sans-serif">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;color:#9d97ff;margin-bottom:8px">FlowCRM</div>
+          <div style="font-size:14px;color:#ff5c7a;font-weight:700;background:rgba(255,92,122,.1);border:1px solid rgba(255,92,122,.3);padding:8px 16px;border-radius:8px;display:inline-block">⚠️ Credenciais do Supabase não configuradas</div>
+        </div>
+        <p style="font-size:13px;color:#9999bb;margin-bottom:20px;line-height:1.6">Para usar o FlowCRM você precisa configurar o Supabase. Siga os passos abaixo:</p>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+          <div style="background:#16161f;border:1px solid #2a2a3d;border-radius:10px;padding:14px">
+            <div style="font-size:12px;font-weight:700;color:#9d97ff;margin-bottom:6px">PASSO 1 — Acesse o arquivo</div>
+            <div style="font-size:12px;color:#9999bb">Abra o arquivo <code style="background:#0a0a0f;padding:2px 6px;border-radius:4px;color:#3ecf8e">crm-saas.html</code> em um editor de texto (VS Code, Notepad++, etc.)</div>
+          </div>
+          <div style="background:#16161f;border:1px solid #2a2a3d;border-radius:10px;padding:14px">
+            <div style="font-size:12px;font-weight:700;color:#9d97ff;margin-bottom:6px">PASSO 2 — Encontre as linhas</div>
+            <div style="background:#0a0a0f;border-radius:6px;padding:10px;font-family:monospace;font-size:12px;color:#f0f0f8;line-height:1.8">
+              const SUPABASE_URL  = '<span style="color:#ff5c7a">SEU_SUPABASE_URL</span>';<br>
+              const SUPABASE_ANON = '<span style="color:#ff5c7a">SUA_SUPABASE_ANON_KEY</span>';
+            </div>
+          </div>
+          <div style="background:#16161f;border:1px solid #2a2a3d;border-radius:10px;padding:14px">
+            <div style="font-size:12px;font-weight:700;color:#9d97ff;margin-bottom:6px">PASSO 3 — Substitua pelos valores reais</div>
+            <div style="background:#0a0a0f;border-radius:6px;padding:10px;font-family:monospace;font-size:12px;color:#f0f0f8;line-height:1.8">
+              const SUPABASE_URL  = '<span style="color:#3ecf8e">https://xxxx.supabase.co</span>';<br>
+              const SUPABASE_ANON = '<span style="color:#3ecf8e">eyJhbGciOiJIUzI1NiIs...</span>';
+            </div>
+            <div style="font-size:11px;color:#55556a;margin-top:8px">Encontre esses valores em: <strong style="color:#9999bb">Supabase → Settings → API</strong></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <a href="https://supabase.com/dashboard" target="_blank" style="flex:1;padding:12px;border-radius:10px;background:#6c63ff;color:#fff;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;display:block">Abrir Supabase Dashboard</a>
+          <button onclick="location.reload()" style="padding:12px 20px;border-radius:10px;border:1px solid #2a2a3d;background:#1c1c28;color:#9999bb;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;cursor:pointer">Recarregar</button>
+        </div>
+      </div>
+    </div>
+  `);
+  throw new Error('Supabase não configurado — substitua SUPABASE_URL e SUPABASE_ANON no arquivo.');
+}
+
+const { createClient } = supabase;
+let sb;
+try {
+  sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+} catch(e) {
+  console.error('Erro ao inicializar Supabase:', e);
+  throw e;
+}
+
+// ── STATE ────────────────────────────────────────────────────────
+let APP = {
+  user: null,        // supabase auth user
+  profile: null,     // public.profiles row
+  role: 'client',
+  activeTab: 'dashboard',
+  activeDealId: null,
+  activeConvoId: null,
+  aiEnabled: true,
+  settingsTab: 'profile',
+  calMonth: new Date().getMonth(),
+  calYear: new Date().getFullYear(),
+  calSelectedDay: new Date().getDate(),
+  simDone: false,
+  accentColor: '#6c63ff',
+};
+
+const COLS = [
+  {id:'entrada',   title:'Entrada / Qualificação', color:'#6c63ff'},
+  {id:'agendamento',title:'Em Agendamento',         color:'#3b9eff'},
+  {id:'followup',  title:'Follow Up',               color:'#ffb547'},
+  {id:'reuniao',   title:'Reunião Agendada',         color:'#3ecf8e'},
+  {id:'noshow',    title:'No-Show',                  color:'#ff5c7a'},
+];
+
+// local cache
+let deals = [], convos = [], msgs = {}, calEvents = {}, automations = [], integrations = [], partnerClients = [], adminUsers = [];
+let activities = [];
+
+// ── SUPABASE AUTH ─────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    APP.user = session.user;
+    await loadProfile();
+    showApp();
+  } else {
+    showLogin();
+  }
+  // listen for auth changes
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      APP.user = session.user;
+      await loadProfile();
+      showApp();
+    }
+    if (event === 'SIGNED_OUT') {
+      APP.user = null; APP.profile = null;
+      showLogin();
+    }
+  });
+}
+
+async function loadProfile() {
+  const { data, error } = await sb.from('profiles').select('*').eq('id', APP.user.id).single();
+  if (error || !data) {
+    // profile might not exist yet (trigger delay) — create it
+    const name = APP.user.user_metadata?.name || APP.user.email.split('@')[0];
+    const role = APP.user.email === ADMIN_EMAIL ? 'admin' : 'client';
+    const { data: created } = await sb.from('profiles').upsert({
+      id: APP.user.id, name, email: APP.user.email, role,
+      company: APP.user.user_metadata?.company || ''
+    }).select().single();
+    APP.profile = created;
+  } else {
+    APP.profile = data;
+  }
+  APP.role = APP.profile?.role || 'client';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const err   = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+  if (!email || !pass) { showError(err, 'Preencha e-mail e senha.'); return; }
+  btn.disabled = true;
+  document.getElementById('login-btn-text').textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    showError(err, error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message);
+    btn.disabled = false;
+    document.getElementById('login-btn-text').textContent = 'Entrar no FlowCRM';
+  }
+}
+
+async function doRegister() {
+  const name    = document.getElementById('reg-name').value.trim();
+  const email   = document.getElementById('reg-email').value.trim();
+  const pass    = document.getElementById('reg-pass').value;
+  const company = document.getElementById('reg-company').value.trim();
+  const err     = document.getElementById('reg-error');
+  const btn     = document.getElementById('reg-btn');
+  if (!name || !email || !pass) { showError(err, 'Preencha todos os campos obrigatórios.'); return; }
+  if (pass.length < 6) { showError(err, 'A senha deve ter pelo menos 6 caracteres.'); return; }
+  btn.disabled = true; btn.textContent = 'Criando conta...';
+  const { error } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { name, company } }
+  });
+  if (error) {
+    showError(err, error.message);
+    btn.disabled = false; btn.textContent = 'Criar conta';
+  } else {
+    toast('✅ Conta criada! Verifique seu e-mail para confirmar.', 'success');
+    showLogin();
+  }
+}
+
+async function doLogout() {
+  closeUserMenu();
+  await sb.auth.signOut();
+}
+
+async function showForgot() {
+  const email = prompt('Digite seu e-mail para recuperar a senha:');
+  if (!email) return;
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href,
+  });
+  if (error) toast('❌ Erro: ' + error.message, 'error');
+  else toast('📧 E-mail de recuperação enviado!', 'success');
+}
+
+// ── LOAD DATA FROM SUPABASE ───────────────────────────────────────
+async function loadAllData() {
+  await Promise.all([loadDeals(), loadConvos(), loadAutomations(), loadEvents()]);
+  if (APP.role === 'admin') await loadAdminUsers();
+  if (APP.role === 'partner') await loadPartnerClients();
+}
+
+async function loadDeals() {
+  const { data } = await sb.from('deals').select('*').order('created_at', { ascending: false });
+  deals = data || [];
+}
+
+async function loadConvos() {
+  const { data } = await sb.from('conversations').select('*').order('created_at', { ascending: false });
+  convos = data || [];
+  // load messages for first convo
+  if (convos.length > 0) {
+    APP.activeConvoId = convos[0].id;
+    await loadMessages(convos[0].id);
+  }
+}
+
+async function loadMessages(convoId) {
+  const { data } = await sb.from('messages').select('*').eq('conversation_id', convoId).order('created_at', { ascending: true });
+  msgs[convoId] = data || [];
+}
+
+async function loadAutomations() {
+  const { data } = await sb.from('automations').select('*').order('created_at', { ascending: true });
+  if (!data || data.length === 0) {
+    await seedAutomations();
+    const { data: seeded } = await sb.from('automations').select('*').order('created_at');
+    automations = seeded || [];
+  } else {
+    automations = data;
+  }
+}
+
+async function seedAutomations() {
+  const defaults = [
+    {owner_id:APP.user.id,icon:'📱',name:'Lead Novo via WhatsApp',description:'Quando primeira mensagem chegar, inicia qualificação com IA.',trigger_name:'Primeira mensagem',action_name:'IA + CRM',active:true,runs:0,converts:'—'},
+    {owner_id:APP.user.id,icon:'🗓️',name:'Confirmação → Google Calendar',description:'Quando cliente confirmar horário via WhatsApp, cria evento e move card.',trigger_name:'Confirmação WPP',action_name:'Calendar + CRM',active:true,runs:0,converts:'—',highlight:true},
+    {owner_id:APP.user.id,icon:'🔁',name:'Follow-up Automático',description:'Leads parados há mais de 2 dias recebem follow-up pela IA.',trigger_name:'Lead inativo 2d',action_name:'Mensagem WPP',active:true,runs:0,converts:'—'},
+  ];
+  await sb.from('automations').insert(defaults);
+}
+
+async function loadEvents() {
+  const { data } = await sb.from('events').select('*');
+  calEvents = {};
+  (data || []).forEach(e => {
+    const d = new Date(e.event_date);
+    const key = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+    if (!calEvents[key]) calEvents[key] = [];
+    calEvents[key].push({ id: e.id, title: e.title, time: e.event_time, type: e.type });
+  });
+}
+
+async function loadAdminUsers() {
+  const { data } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+  adminUsers = data || [];
+}
+
+async function loadPartnerClients() {
+  const { data } = await sb.from('profiles').select('*').eq('partner_id', APP.user.id).order('created_at', { ascending: false });
+  partnerClients = data || [];
+}
+
+// ── UI FLOW ────────────────────────────────────────────────────────
+function showLoading(text='Carregando...') {
+  document.getElementById('loading-screen').style.display = 'flex';
+  document.querySelector('#loading-screen .loading-text').textContent = text;
+}
+function hideLoading() {
+  document.getElementById('loading-screen').style.display = 'none';
+}
+function showLogin() {
+  hideLoading();
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+async function showApp() {
+  showLoading('Carregando seus dados...');
+  document.getElementById('login-screen').style.display = 'none';
+  await loadAllData();
+  setupUI();
+  document.getElementById('app').style.display = 'flex';
+  hideLoading();
+  switchTab('dashboard');
+}
+function setupUI() {
+  const p = APP.profile;
+  const n = p?.name || APP.user?.email || '?';
+  const initials = n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  const avatarColors = {admin:'linear-gradient(135deg,#ff5c7a,#6c63ff)',partner:'linear-gradient(135deg,#ffb547,#ff9a3c)',client:'linear-gradient(135deg,#3ecf8e,#3b9eff)'};
+  const roleLabels = {admin:'Administrador',partner:'Parceiro',client:'Cliente'};
+  const badgeClass = {admin:'role-admin',partner:'role-partner',client:'role-client'};
+  const badgeText = {admin:'Admin',partner:'Parceiro',client:'Cliente'};
+  document.getElementById('user-name').textContent = n;
+  document.getElementById('user-role-label').textContent = roleLabels[APP.role];
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-avatar').style.background = avatarColors[APP.role];
+  document.getElementById('sidebar-sub').textContent = p?.company || roleLabels[APP.role];
+  const badge = document.getElementById('topbar-role-badge');
+  badge.className = `role-badge ${badgeClass[APP.role]}`;
+  badge.textContent = badgeText[APP.role];
+  document.getElementById('btn-new-contact').style.display = APP.role==='client' ? 'none' : '';
+  buildNav();
+}
+function showRegister(){document.getElementById('login-form-area').style.display='none';document.getElementById('register-form-area').style.display='block';document.getElementById('forgot-link').style.display='none';}
+function showLogin(){document.getElementById('login-form-area').style.display='block';document.getElementById('register-form-area').style.display='none';document.getElementById('forgot-link').style.display='block';const e=document.getElementById('login-error');if(e)e.style.display='none';const btn=document.getElementById('login-btn');if(btn){btn.disabled=false;document.getElementById('login-btn-text').textContent='Entrar no FlowCRM';}}
+function showError(el, msg){el.textContent=msg;el.style.display='block';}
+
+// ── NAV ────────────────────────────────────────────────────────────
+const NAV_ITEMS = {
+  admin:[
+    {section:'Principal'},{id:'dashboard',icon:'⚡',label:'Dashboard'},{id:'crm',icon:'📊',label:'Pipeline CRM'},{id:'inbox',icon:'💬',label:'Atendimento',badge:'inbox'},
+    {section:'Ferramentas'},{id:'automations',icon:'🔁',label:'Automações'},{id:'agenda',icon:'📅',label:'Agenda',badge:'NOVO',bc:'green'},{id:'ai',icon:'✦',label:'Agente IA'},
+    {section:'Dados'},{id:'contacts',icon:'👥',label:'Contatos'},{id:'reports',icon:'📈',label:'Relatórios'},{id:'integrations',icon:'🔌',label:'Integrações'},
+    {section:'Administração'},{id:'admin',icon:'🛡️',label:'Painel Admin',badge:'HOT',bc:'orange'},
+    {section:'Conta'},{id:'settings',icon:'⚙️',label:'Configurações'},
+  ],
+  partner:[
+    {section:'Meu CRM'},{id:'dashboard',icon:'⚡',label:'Dashboard'},{id:'crm',icon:'📊',label:'Pipeline CRM'},{id:'inbox',icon:'💬',label:'Atendimento',badge:'inbox'},
+    {section:'Ferramentas'},{id:'automations',icon:'🔁',label:'Automações'},{id:'agenda',icon:'📅',label:'Agenda'},{id:'ai',icon:'✦',label:'Agente IA'},
+    {section:'Meus Clientes'},{id:'partner-clients',icon:'🏢',label:'Clientes'},
+    {section:'Dados'},{id:'contacts',icon:'👥',label:'Contatos'},{id:'reports',icon:'📈',label:'Relatórios'},{id:'integrations',icon:'🔌',label:'Integrações'},
+    {section:'Conta'},{id:'settings',icon:'⚙️',label:'Configurações'},
+  ],
+  client:[
+    {section:'Meu CRM'},{id:'dashboard',icon:'⚡',label:'Dashboard'},{id:'crm',icon:'📊',label:'Pipeline CRM'},{id:'inbox',icon:'💬',label:'Atendimento',badge:'inbox'},
+    {section:'Ferramentas'},{id:'automations',icon:'🔁',label:'Automações'},{id:'agenda',icon:'📅',label:'Agenda'},{id:'ai',icon:'✦',label:'Agente IA'},
+    {section:'Dados'},{id:'contacts',icon:'👥',label:'Contatos'},{id:'reports',icon:'📈',label:'Relatórios'},
+    {section:'Conta'},{id:'settings',icon:'⚙️',label:'Configurações'},
+  ],
+};
+function buildNav(){
+  const nav=document.getElementById('main-nav');nav.innerHTML='';
+  NAV_ITEMS[APP.role].forEach(item=>{
+    if(item.section){nav.innerHTML+=`<div class="nav-section">${item.section}</div>`;return;}
+    let badge='';
+    if(item.badge==='inbox'){const u=convos.filter(c=>c.unread).length;badge=u?`<span class="nav-badge">${u}</span>`:''}
+    else if(item.badge){badge=`<span class="nav-badge ${item.bc||''}">${item.badge}</span>`}
+    const el=document.createElement('div');el.className='nav-item';el.dataset.tab=item.id;
+    el.innerHTML=`<span class="nav-icon">${item.icon}</span>${item.label}${badge}`;
+    el.addEventListener('click',()=>switchTab(item.id));nav.appendChild(el);
+  });
+}
+function switchTab(name){
+  APP.activeTab=name;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelector(`[data-tab="${name}"]`)?.classList.add('active');
+  const titles={dashboard:'Dashboard',crm:'Pipeline CRM',inbox:'Central de Atendimento',automations:'Automações',agenda:'Agenda & Agendamento',ai:'Agente de IA',contacts:'Contatos',reports:'Relatórios',integrations:'Integrações',admin:'Painel Administrativo',settings:'Configurações','partner-clients':'Meus Clientes',profile:'Meu Perfil'};
+  document.getElementById('page-title').textContent=titles[name]||name;
+  renderContent(name);
+}
+async function renderContent(tab){
+  const c=document.getElementById('main-content');c.innerHTML='';
+  switch(tab){
+    case 'dashboard':c.innerHTML=renderDashboard();break;
+    case 'crm':c.innerHTML=renderCRM();initKanban();break;
+    case 'inbox':c.innerHTML=renderInbox();initInbox();break;
+    case 'automations':c.innerHTML=renderAutomationsTab();break;
+    case 'agenda':c.innerHTML=renderAgenda();initCalendar();break;
+    case 'ai':c.innerHTML=renderAI();break;
+    case 'contacts':c.innerHTML=renderContacts();break;
+    case 'reports':c.innerHTML=renderReports();break;
+    case 'integrations':c.innerHTML=renderIntegrationsTab();break;
+    case 'admin':
+      if(APP.role==='admin'){c.innerHTML=renderAdmin();}
+      else c.innerHTML='<div class="empty-state"><div class="ei">🔒</div>Acesso restrito</div>';break;
+    case 'settings':case 'profile':c.innerHTML=renderSettings();break;
+    case 'partner-clients':
+      if(APP.role==='partner'||APP.role==='admin'){c.innerHTML=renderPartnerClients();}
+      else c.innerHTML='<div class="empty-state"><div class="ei">🔒</div>Acesso restrito</div>';break;
+    default:c.innerHTML='<div class="empty-state"><div class="ei">🚧</div>Em construção</div>';
+  }
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────
+function renderDashboard(){
+  const byCols=COLS.map(c=>deals.filter(d=>d.col===c.id).length);
+  const max=Math.max(...byCols,1);
+  const bars=byCols.map((v,i)=>`<div class="bar-wrap"><div class="bar-val">${v}</div><div class="bar" style="height:${Math.max(v/max*100,4)}%;background:linear-gradient(180deg,${COLS[i].color},${COLS[i].color}88)"></div><div class="bar-lbl">${COLS[i].title.split('/')[0].split(' ')[0]}</div></div>`).join('');
+  const actHtml=activities.slice(0,5).map(a=>`<div class="act-item"><div class="act-icon">${a.icon}</div><div class="act-text">${a.text}</div><div class="act-time">${a.time}</div></div>`).join('') || '<div style="font-size:13px;color:var(--text3);padding:12px 0">Nenhuma atividade ainda.</div>';
+  return`<div class="stats-row">
+    <div class="stat-card purple" onclick="switchTab('crm')"><div class="stat-label">Negócios</div><div class="stat-value">${deals.length}</div><div class="stat-sub">no pipeline</div></div>
+    <div class="stat-card green" onclick="switchTab('inbox')"><div class="stat-label">Conversas</div><div class="stat-value">${convos.length}</div><div class="stat-sub">${convos.filter(c=>c.unread).length} não lidas</div></div>
+    <div class="stat-card orange" onclick="switchTab('agenda')"><div class="stat-label">Reuniões Ag.</div><div class="stat-value">${deals.filter(d=>d.col==='reuniao').length}</div><div class="stat-sub">agendadas</div></div>
+    <div class="stat-card blue" onclick="switchTab('automations')"><div class="stat-label">Automações</div><div class="stat-value">${automations.filter(a=>a.active).length}</div><div class="stat-sub">ativas</div></div>
+  </div>
+  <div class="notif-banner"><div class="nb-icon">🗓️</div><div class="nb-text" style="flex:1"><h4>Agendamento Automático WhatsApp → Google Calendar ativo</h4><p>Leads que confirmam pelo WhatsApp têm eventos criados automaticamente na agenda.</p></div><button class="btn btn-green btn-sm" onclick="switchTab('agenda')">Ver Agenda</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="rep-card"><h4>Pipeline por Etapa</h4><div class="bar-chart">${bars||'<div style="color:var(--text3);font-size:13px;padding:20px">Nenhum negócio ainda. <a onclick="openModal(\'newDeal\')" style="color:var(--accent2);cursor:pointer">Crie um!</a></div>'}</div></div>
+    <div class="rep-card"><h4>Atividades Recentes</h4><div class="activity-feed">${actHtml}</div></div>
+  </div>`;
+}
+
+// ── KANBAN ─────────────────────────────────────────────────────────
+function renderCRM(){return`<div class="section-header"><h3>Pipeline de Vendas</h3><div style="display:flex;gap:8px"><button class="btn btn-ghost btn-sm" onclick="toast('🔍 Filtros em breve','info')">Filtros</button><button class="btn btn-primary btn-sm" onclick="openModal('newDeal')">+ Novo Negócio</button></div></div><div class="kanban-wrap"><div class="kanban-board" id="kanban-board"></div></div>`;}
+function initKanban(){
+  const board=document.getElementById('kanban-board');if(!board)return;board.innerHTML='';
+  COLS.forEach(col=>{
+    const cards=deals.filter(d=>d.col===col.id);
+    const colEl=document.createElement('div');colEl.className='kanban-col';
+    colEl.innerHTML=`<div class="col-head"><div class="col-header"><div class="col-dot" style="background:${col.color}"></div><div class="col-title">${col.title}</div><div class="col-count">${cards.length}</div></div></div><div class="col-cards" id="cards-${col.id}" data-col="${col.id}"></div><button class="col-add-btn" onclick="openAddInCol('${col.id}')">+ Adicionar negócio</button>`;
+    board.appendChild(colEl);
+    const zone=colEl.querySelector('.col-cards');
+    cards.forEach(d=>zone.appendChild(makeCard(d)));
+    setupDrop(zone);
+  });
+}
+function makeCard(d){
+  const el=document.createElement('div');el.className='kanban-card';el.draggable=true;el.dataset.id=d.id;
+  const init=(d.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  const colors=d.colors||['#6c63ff','#3b9eff'];
+  const tClr={'Follow':'tag-purple','ICP Ideal':'tag-green','MQL':'tag-blue','ICP':'tag-green','tem_timing':'tag-green','No show':'tag-red','Reunião Agendada':'tag-green','Outros Nicho':'tag-orange'};
+  const tags=(d.tags||[]).map(t=>`<span class="tag ${tClr[t]||'tag-purple'}">${t}</span>`).join('');
+  el.innerHTML=`<div class="card-top"><div class="mini-avatar" style="background:linear-gradient(135deg,${colors[0]},${colors[1]})">${init}</div><div class="card-name" title="${d.name}">${d.name}</div>${d.value?`<div class="card-value">${d.value}</div>`:''}</div>${tags?`<div class="card-tags">${tags}</div>`:''}<div class="card-footer"><span>${d.channel||'📱'}</span><span class="sep"></span><span>${d.company||''}</span>${d.gcal?'<span style="margin-left:auto;font-size:13px" title="Google Calendar">🗓️</span>':''}</div>`;
+  el.addEventListener('click',()=>openDealDetail(d.id));
+  el.addEventListener('dragstart',e=>{e.dataTransfer.setData('dealId',d.id);el.classList.add('dragging');});
+  el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+  return el;
+}
+function setupDrop(zone){
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');const after=getDragAfter(zone,e.clientY);const drag=document.querySelector('.dragging');if(drag)after?zone.insertBefore(drag,after):zone.appendChild(drag);});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
+  zone.addEventListener('drop',async e=>{
+    e.preventDefault();zone.classList.remove('drag-over');
+    const id=e.dataTransfer.getData('dealId');const newCol=zone.dataset.col;
+    const deal=deals.find(d=>d.id===id);if(!deal||deal.col===newCol)return;
+    deal.col=newCol;
+    const {error}=await sb.from('deals').update({col:newCol}).eq('id',id);
+    if(error){toast('❌ Erro ao mover card','error');deal.col=newCol;return;}
+    const colMeta=COLS.find(c=>c.id===newCol);
+    if(newCol==='reuniao'){deal.gcal=true;await sb.from('deals').update({gcal:true}).eq('id',id);toast(`🗓️ ${deal.name} → Reunião Agendada — Google Calendar!`,'success');addActivity('🗓️',`<strong>${deal.name}</strong> movido → Reunião Agendada`);}
+    else toast(`✓ ${deal.name} → ${colMeta.title}`,'info');
+    initKanban();
+  });
+}
+function getDragAfter(c,y){return[...c.querySelectorAll('.kanban-card:not(.dragging)')].reduce((cl,ch)=>{const b=ch.getBoundingClientRect();const o=y-b.top-b.height/2;return o<0&&o>cl.offset?{offset:o,element:ch}:cl},{offset:Number.NEGATIVE_INFINITY}).element;}
+function openAddInCol(colId){document.getElementById('nd-stage').value=COLS.find(c=>c.id===colId)?.title||'';openModal('newDeal');}
+
+// ── DEAL DETAIL ───────────────────────────────────────────────────
+function openDealDetail(id){
+  const d=deals.find(x=>x.id===id);if(!d)return;APP.activeDealId=id;
+  document.getElementById('dd-name').textContent=d.name;
+  document.getElementById('dd-sub').textContent=(d.company||'—')+' · '+(COLS.find(c=>c.id===d.col)?.title||'');
+  document.getElementById('dd-value').value=d.value||'';
+  document.getElementById('dd-phone').textContent=d.phone||'—';
+  document.getElementById('dd-channel').textContent=d.channel||'—';
+  document.getElementById('dd-stage').value=COLS.find(c=>c.id===d.col)?.title||'Entrada / Qualificação';
+  const tClr={'Follow':'tag-purple','ICP Ideal':'tag-green','MQL':'tag-blue','ICP':'tag-green','No show':'tag-red','Reunião Agendada':'tag-green'};
+  document.getElementById('dd-tags').innerHTML=(d.tags||[]).map((t,i)=>`<span class="tag ${tClr[t]||'tag-purple'}" style="cursor:pointer" onclick="removeTag('${id}',${i})">${t} ×</span>`).join('');
+  const hist=d.history||[];
+  document.getElementById('dd-history').innerHTML=hist.length?hist.filter(h=>h.text).map(h=>`<div class="history-item"><div class="history-dot ${h.type||''}"></div><div><div>${h.text}</div><div style="font-size:10px;color:var(--text3);margin-top:1px">${h.time||''}</div></div></div>`).join(''):'<div style="font-size:13px;color:var(--text3)">Sem histórico.</div>';
+  document.getElementById('dd-note').value='';
+  openModal('dealDetail');
+}
+async function removeTag(dealId,idx){const d=deals.find(x=>x.id===dealId);if(!d)return;d.tags.splice(idx,1);await sb.from('deals').update({tags:d.tags}).eq('id',dealId);openDealDetail(dealId);}
+async function addTagToDeal(){const inp=document.getElementById('dd-tag-input');const val=inp.value.trim();if(!val||!APP.activeDealId)return;const d=deals.find(x=>x.id===APP.activeDealId);if(!d||d.tags.includes(val))return;d.tags.push(val);await sb.from('deals').update({tags:d.tags}).eq('id',APP.activeDealId);inp.value='';openDealDetail(APP.activeDealId);}
+async function saveDeal(){
+  const d=deals.find(x=>x.id===APP.activeDealId);if(!d)return;
+  d.value=document.getElementById('dd-value').value;
+  const stageMap={'Entrada / Qualificação':'entrada','Em Agendamento':'agendamento','Follow Up':'followup','Reunião Agendada':'reuniao','No-Show':'noshow','Ganho ✓':'ganho','Perdido ✗':'perdido'};
+  d.col=stageMap[document.getElementById('dd-stage').value]||d.col;
+  const note=document.getElementById('dd-note').value.trim();
+  if(note){const hist=[{type:'blue',text:'📝 '+note,time:'agora'},...(d.history||[])];d.history=hist;await sb.from('deals').update({value:d.value,col:d.col,history:d.history}).eq('id',APP.activeDealId);}
+  else await sb.from('deals').update({value:d.value,col:d.col}).eq('id',APP.activeDealId);
+  closeModal('dealDetail');toast('✓ Negócio salvo!','success');
+  if(APP.activeTab==='crm')initKanban();
+  if(APP.activeTab==='dashboard')renderContent('dashboard');
+}
+async function createDeal(){
+  const name=document.getElementById('nd-name').value.trim();if(!name){toast('⚠️ Informe o nome','warn');return;}
+  const stageMap={'Entrada / Qualificação':'entrada','Em Agendamento':'agendamento','Follow Up':'followup','Reunião Agendada':'reuniao'};
+  const pals=[['#6c63ff','#3b9eff'],['#3ecf8e','#2dd4bf'],['#ffb547','#ff9a3c'],['#ff5c7a','#d43a57'],['#a78bfa','#6c63ff']];
+  const c=pals[Math.floor(Math.random()*pals.length)];
+  const newDeal={owner_id:APP.user.id,col:stageMap[document.getElementById('nd-stage').value]||'entrada',name,company:document.getElementById('nd-company').value,phone:document.getElementById('nd-phone').value,channel:document.getElementById('nd-channel').value,value:document.getElementById('nd-value').value,tags:[],colors:c,age:'agora',history:[{type:'purple',text:'Criado manualmente',time:'agora'}]};
+  const {data,error}=await sb.from('deals').insert(newDeal).select().single();
+  if(error){toast('❌ Erro ao criar negócio','error');return;}
+  deals.unshift(data);
+  closeModal('newDeal');['nd-name','nd-company','nd-phone','nd-value'].forEach(id=>document.getElementById(id).value='');
+  toast(`✓ Negócio "${name}" criado!`,'success');addActivity('📊',`Novo negócio: <strong>${name}</strong>`);
+  if(APP.activeTab==='crm')initKanban();if(APP.activeTab==='dashboard')renderContent('dashboard');
+}
+function openScheduleFromDeal(){closeModal('dealDetail');const d=deals.find(x=>x.id===APP.activeDealId);if(d)document.getElementById('sch-contact').value=d.name;openModal('scheduleNew');}
+
+// ── INBOX ─────────────────────────────────────────────────────────
+function renderInbox(){
+  return`<div class="inbox-layout">
+    <div class="inbox-list">
+      <div class="inbox-tabs"><div class="inbox-tab active" onclick="filterInbox('all',this)">Todos</div><div class="inbox-tab" onclick="filterInbox('whatsapp',this)">WhatsApp</div><div class="inbox-tab" onclick="filterInbox('instagram',this)">Instagram</div></div>
+      <div class="inbox-search"><input type="text" placeholder="🔍 Buscar..." oninput="searchConvos(this.value)"></div>
+      <div class="convo-list" id="convo-list"></div>
+    </div>
+    <div class="chat-area">
+      <div class="chat-header" id="chat-header">
+        <div class="avatar" id="chat-avatar" style="background:linear-gradient(135deg,#3b9eff,#6c63ff)">?</div>
+        <div><div class="chat-header-info"><h4 id="chat-name">Selecione uma conversa</h4><p id="chat-sub">—</p></div></div>
+        <div class="chat-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openScheduleFromChat()">🗓️ Agendar</button>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('newTicket')">🎫 Ticket</button>
+          <button class="btn btn-ghost btn-sm" id="ai-btn" onclick="toggleAI()" style="color:var(--green)" title="IA ativa">✦</button>
+        </div>
+      </div>
+      <div class="chat-messages" id="chat-messages"><div class="empty-state"><div class="ei">💬</div>Selecione uma conversa</div></div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chat-input" placeholder="Digite... (Enter envia)" rows="1" onkeydown="chatKey(event)"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="sendMsg()">Enviar</button>
+      </div>
+    </div>
+  </div>`;
+}
+function initInbox(){renderConvoList(convos);if(APP.activeConvoId)selectConvo(APP.activeConvoId);}
+function renderConvoList(list){
+  const el=document.getElementById('convo-list');if(!el)return;
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="ei">💬</div>Nenhuma conversa<br><br><button class="btn btn-primary btn-sm" onclick="newConvo()">+ Nova Conversa</button></div>';return;}
+  el.innerHTML=list.map(c=>{
+    const lastMsg=msgs[c.id];const preview=lastMsg?.length?lastMsg[lastMsg.length-1].text.split('\n')[0].slice(0,44):'...';
+    const t=new Date(c.created_at);const timeStr=`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    const init=(c.contact_name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    return`<div class="convo-item ${c.id===APP.activeConvoId?'active':''}" onclick="selectConvo('${c.id}')">
+      <div style="font-size:14px;margin-top:3px;flex-shrink:0">${c.channel==='instagram'?'📸':'📱'}</div>
+      <div class="convo-info"><div class="convo-name-row"><span class="convo-name">${c.contact_name}</span><span class="convo-time">${timeStr}</span></div><div class="convo-preview">${preview}</div></div>
+      ${c.unread?'<div class="unread-dot"></div>':''}
+    </div>`;}).join('');
+}
+async function selectConvo(id){
+  APP.activeConvoId=id;const c=convos.find(x=>x.id===id);if(!c)return;
+  if(c.unread){c.unread=false;await sb.from('conversations').update({unread:false}).eq('id',id);}
+  const init=(c.contact_name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  const av=document.getElementById('chat-avatar');if(av)av.textContent=init;
+  const cn=document.getElementById('chat-name');if(cn)cn.textContent=c.contact_name;
+  const cs=document.getElementById('chat-sub');if(cs)cs.textContent=`${c.channel==='instagram'?'📸 Instagram':'📱 WhatsApp'} · ${c.contact_phone||''}`;
+  if(!msgs[id])await loadMessages(id);
+  renderMessages();renderConvoList(convos);
+}
+function renderMessages(){
+  const el=document.getElementById('chat-messages');if(!el)return;
+  const list=msgs[APP.activeConvoId]||[];
+  if(!list.length){el.innerHTML='<div class="empty-state"><div class="ei">💬</div>Sem mensagens ainda</div>';return;}
+  el.innerHTML=list.map(m=>{
+    const t=new Date(m.created_at);const ts=`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    if(m.type==='ai')return`<div class="msg ai-msg"><div class="ai-label">✦ Agente IA</div><div class="msg-bubble">${m.text.replace(/\n/g,'<br>')}</div><div class="msg-time">${ts}</div></div>`;
+    if(m.type==='out')return`<div class="msg out"><div class="msg-bubble">${m.text.replace(/\n/g,'<br>')}</div><div class="msg-time">${ts}</div></div>`;
+    return`<div class="msg in"><div class="msg-bubble">${m.text.replace(/\n/g,'<br>')}</div><div class="msg-time">${ts}</div></div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+async function sendMsg(){
+  const inp=document.getElementById('chat-input');const txt=inp.value.trim();if(!txt||!APP.activeConvoId)return;
+  const newMsg={conversation_id:APP.activeConvoId,type:'out',text:txt};
+  const {data,error}=await sb.from('messages').insert(newMsg).select().single();
+  if(error){toast('❌ Erro ao enviar','error');return;}
+  if(!msgs[APP.activeConvoId])msgs[APP.activeConvoId]=[];
+  msgs[APP.activeConvoId].push(data);inp.value='';renderMessages();renderConvoList(convos);
+  if(APP.aiEnabled){
+    setTimeout(async()=>{
+      const replies=['Entendido! Posso te ajudar com mais alguma coisa?','Perfeito! Qual seria a melhor data para conversarmos?','Obrigado! Vou verificar isso agora.'];
+      const aiMsg={conversation_id:APP.activeConvoId,type:'ai',text:replies[Math.floor(Math.random()*replies.length)]};
+      const {data:ad}=await sb.from('messages').insert(aiMsg).select().single();
+      if(ad){msgs[APP.activeConvoId].push(ad);renderMessages();}
+    },1200);
+  }
+}
+function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+function toggleAI(){APP.aiEnabled=!APP.aiEnabled;const btn=document.getElementById('ai-btn');if(btn)btn.style.color=APP.aiEnabled?'var(--green)':'var(--text3)';toast(APP.aiEnabled?'✦ IA ativada':'✦ IA desativada','info');}
+function filterInbox(f,el){document.querySelectorAll('.inbox-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderConvoList(f==='all'?convos:convos.filter(c=>c.channel===f));}
+function searchConvos(q){renderConvoList(convos.filter(c=>c.contact_name.toLowerCase().includes(q.toLowerCase())));}
+function openScheduleFromChat(){const c=convos.find(x=>x.id===APP.activeConvoId);if(c)document.getElementById('sch-contact').value=c.contact_name;openModal('scheduleNew');}
+async function newConvo(){
+  const name=prompt('Nome do contato:');if(!name)return;
+  const phone=prompt('Telefone (WhatsApp):');
+  const {data,error}=await sb.from('conversations').insert({owner_id:APP.user.id,contact_name:name,contact_phone:phone||'',channel:'whatsapp',unread:false}).select().single();
+  if(error){toast('❌ Erro ao criar conversa','error');return;}
+  convos.unshift(data);msgs[data.id]=[];renderConvoList(convos);selectConvo(data.id);toast(`💬 Conversa com ${name} criada!`,'success');
+}
+
+// ── AUTOMATIONS ───────────────────────────────────────────────────
+function renderAutomationsTab(){
+  const cards=automations.map(a=>`
+    <div class="auto-card ${a.highlight?'highlight':''}">
+      <div style="font-size:22px;margin-bottom:10px">${a.icon||'⚡'}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:5px">${a.name}${a.highlight?' <span style="font-size:10px;color:var(--green);border:1px solid rgba(62,207,142,.4);padding:2px 7px;border-radius:5px">EXCLUSIVO</span>':''}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.55">${a.description||''}</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:12px;flex-wrap:wrap"><span class="flow-chip">⚡ ${a.trigger_name}</span><span style="color:var(--text3)">→</span><span class="flow-chip">🔁 ${a.action_name}</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text3)"><strong style="color:var(--text);font-family:'Outfit',sans-serif;font-size:14px">${a.runs||0}</strong> disparos</div>
+        <div style="font-size:12px;color:var(--text3)"><strong style="color:var(--text);font-family:'Outfit',sans-serif;font-size:14px">${a.converts||'—'}</strong> conv.</div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3)">
+          <span id="auto-lbl-${a.id}">${a.active?'Ativo':'Pausado'}</span>
+          <label class="toggle"><input type="checkbox" ${a.active?'checked':''} onchange="toggleAuto('${a.id}',this)"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+    </div>`).join('');
+  return`<div class="section-header"><h3>Automações</h3><button class="btn btn-primary btn-sm" onclick="openModal('newAuto')">+ Nova</button></div>
+  <div class="notif-banner"><div class="nb-icon">🗓️</div><div class="nb-text"><h4>Exclusivo FlowCRM — Agendamento Automático</h4><p>Confirmação no WhatsApp → Google Calendar + invite + CRM atualizado</p></div></div>
+  <div class="auto-grid">${cards||'<div class="empty-state"><div class="ei">🔁</div>Nenhuma automação</div>'}</div>`;
+}
+async function toggleAuto(id,el){
+  const a=automations.find(x=>x.id===id);if(!a)return;a.active=el.checked;
+  await sb.from('automations').update({active:a.active}).eq('id',id);
+  const lbl=document.getElementById('auto-lbl-'+id);if(lbl)lbl.textContent=a.active?'Ativo':'Pausado';
+  toast(`${a.active?'✅ Ativada':'⏸ Pausada'}: ${a.name}`,a.active?'success':'info');
+}
+async function createAuto(){
+  const name=document.getElementById('na-name').value.trim();if(!name){toast('⚠️ Informe o nome','warn');return;}
+  const {data,error}=await sb.from('automations').insert({owner_id:APP.user.id,icon:'⚡',name,description:`${document.getElementById('na-trigger').value} → ${document.getElementById('na-action').value}`,trigger_name:document.getElementById('na-trigger').value,action_name:document.getElementById('na-action').value,active:true}).select().single();
+  if(error){toast('❌ Erro ao criar','error');return;}
+  automations.push(data);closeModal('newAuto');toast(`✅ Automação "${name}" criada!`,'success');renderContent('automations');
+}
+
+// ── AGENDA ────────────────────────────────────────────────────────
+function renderAgenda(){
+  return`<div class="section-header"><h3>Agenda & Agendamento Automático</h3><button class="btn btn-green btn-sm" onclick="openModal('scheduleNew')">🗓️ Novo Agendamento</button></div>
+  <div class="notif-banner"><div class="nb-icon">📲</div><div class="nb-text" style="flex:1"><h4>Fluxo WhatsApp → Google Calendar</h4><p>IA propõe horários → cliente confirma → evento criado + invite e-mail + card no CRM</p></div><button class="btn btn-green btn-sm" id="sim-btn" onclick="runSim()">▶ Simular</button></div>
+  <div class="agenda-layout">
+    <div class="cal-card"><div class="cal-nav"><button class="btn btn-ghost btn-sm" onclick="changeMonth(-1)">‹</button><h4 id="cal-title"></h4><button class="btn btn-ghost btn-sm" onclick="changeMonth(1)">›</button></div><div class="cal-grid" id="cal-grid"></div></div>
+    <div class="events-panel"><h4 style="font-size:14px;font-weight:700;color:var(--text)">📅 Eventos — <span id="events-date"></span></h4><div id="events-list"></div><button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="openModal('scheduleNew')">+ Adicionar</button></div>
+  </div>`;
+}
+function initCalendar(){renderCal();renderEventsPanel(APP.calSelectedDay);}
+function renderCal(){
+  const grid=document.getElementById('cal-grid');if(!grid)return;
+  const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const days=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const t=document.getElementById('cal-title');if(t)t.textContent=`${months[APP.calMonth]} ${APP.calYear}`;
+  grid.innerHTML=days.map(d=>`<div class="cal-dh">${d}</div>`).join('');
+  const first=new Date(APP.calYear,APP.calMonth,1).getDay();
+  const dim=new Date(APP.calYear,APP.calMonth+1,0).getDate();
+  const today=new Date();
+  for(let i=0;i<first;i++)grid.innerHTML+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const key=`${APP.calYear}-${APP.calMonth+1}-${d}`;
+    const hasEv=!!calEvents[key];
+    const isToday=d===today.getDate()&&APP.calMonth===today.getMonth()&&APP.calYear===today.getFullYear();
+    const isSel=d===APP.calSelectedDay;
+    grid.innerHTML+=`<div class="cal-day ${isSel&&!isToday?'selected':''} ${isToday?'today':''} ${hasEv?'has-ev':''}" onclick="selectDay(${d})">${d}</div>`;
+  }
+}
+function selectDay(d){APP.calSelectedDay=d;const m=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];const el=document.getElementById('events-date');if(el)el.textContent=`${d} ${m[APP.calMonth]}`;renderCal();renderEventsPanel(d);}
+function renderEventsPanel(d){
+  const key=`${APP.calYear}-${APP.calMonth+1}-${d}`;const evs=calEvents[key]||[];
+  const el=document.getElementById('events-list');if(!el)return;
+  const m=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const dateEl=document.getElementById('events-date');if(dateEl)dateEl.textContent=`${d} ${m[APP.calMonth]}`;
+  if(!evs.length){el.innerHTML='<div class="empty-state"><div class="ei">📭</div>Nenhum evento</div>';return;}
+  el.innerHTML=evs.map(e=>`<div class="event-item ${e.type}"><div class="event-time">${e.time||''}</div><div class="event-title">${e.title}</div><div style="margin-top:4px">${e.type==='gcal'?'<span class="gcal-badge">🗓️ Google Calendar</span>':'<span style="font-size:11px;color:var(--blue)">📝 Manual</span>'}</div></div>`).join('');
+}
+function changeMonth(dir){APP.calMonth+=dir;if(APP.calMonth<0){APP.calMonth=11;APP.calYear--;}if(APP.calMonth>11){APP.calMonth=0;APP.calYear++;}APP.calSelectedDay=1;renderCal();renderEventsPanel(1);}
+async function scheduleManual(){
+  const contact=document.getElementById('sch-contact').value.trim()||'Lead';
+  const date=document.getElementById('sch-date').value;const time=document.getElementById('sch-time').value;
+  if(!date){toast('⚠️ Selecione uma data','warn');return;}
+  const {data,error}=await sb.from('events').insert({owner_id:APP.user.id,title:`${document.getElementById('sch-type').value.split('(')[0].trim()} — ${contact}`,event_date:date,event_time:time,type:'gcal',contact_name:contact}).select().single();
+  if(error){toast('❌ Erro ao criar evento','error');return;}
+  const d=new Date(date);const key=`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  if(!calEvents[key])calEvents[key]=[];calEvents[key].push({id:data.id,title:data.title,time,type:'gcal'});
+  APP.calMonth=d.getMonth();APP.calYear=d.getFullYear();APP.calSelectedDay=d.getDate();
+  closeModal('scheduleNew');toast(`🗓️ Evento criado: ${contact} — ${time}`,'success');
+  addActivity('🗓️',`Reunião agendada: <strong>${contact}</strong> — ${date} às ${time}`);
+  if(APP.activeTab==='agenda'){renderCal();renderEventsPanel(APP.calSelectedDay);}
+}
+function scheduleViaWpp(){const contact=document.getElementById('sch-contact').value.trim()||'Lead';toast(`📲 Horários enviados para ${contact} via WhatsApp!`,'success');closeModal('scheduleNew');setTimeout(()=>toast(`✅ ${contact} confirmou um horário!`,'success'),2500);setTimeout(()=>{toast('🗓️ Evento criado automaticamente no Google Calendar!','success');addActivity('🗓️',`<strong>${contact}</strong> confirmou via WhatsApp → Calendar atualizado`);},3500);}
+function runSim(){if(APP.simDone){toast('ℹ️ Recarregue a aba para simular novamente','info');return;}APP.simDone=true;const btn=document.getElementById('sim-btn');if(btn){btn.textContent='✓ Simulado';btn.disabled=true;}toast('📲 Lead confirmou horário via WhatsApp ✅','success');setTimeout(()=>toast('🗓️ Evento criado no Google Calendar!','success'),1200);setTimeout(()=>toast('📧 Invite enviado por e-mail!','success'),2000);setTimeout(()=>toast('📊 Card movido para Reunião Agendada!','success'),2800);setTimeout(()=>{toast('💬 Confirmação enviada com link da reunião','success');addActivity('🗓️','<strong>Agendamento automático</strong> via WhatsApp → Calendar atualizado.');},3600);}
+
+// ── AI ────────────────────────────────────────────────────────────
+function renderAI(){
+  return`<div class="section-header"><h3>Agente de IA</h3><div style="display:flex;gap:8px;align-items:center"><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(62,207,142,.15);color:var(--green);border:1px solid rgba(62,207,142,.3)">● Ativo</span><button class="btn btn-primary btn-sm" onclick="openModal('trainAI')">✍️ Treinar</button></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+      <h4 style="margin-bottom:12px">✦ Capacidades</h4>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${[['✓','Qualifica leads com perguntas configuráveis'],['✓','Entende áudio, imagens e documentos'],['✓','Responde 24h com tom de voz da sua marca'],['🗓','<strong style="color:var(--green)">Agenda no Google Calendar</strong> quando confirmar'],['✓','Transfere para humano mantendo contexto'],['✓','Move cards no CRM automaticamente']].map(([i,t])=>`<div style="display:flex;gap:9px;align-items:flex-start"><div style="width:19px;height:19px;border-radius:50%;background:rgba(62,207,142,.18);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green);flex-shrink:0;margin-top:1px">${i}</div><div style="font-size:12.5px;color:var(--text2)">${t}</div></div>`).join('')}
+      </div>
+      <div style="margin-top:14px"><div class="form-label">Modelo</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:6px" id="model-chips">
+          ${['GPT-4o','Claude 3.5','Gemini Pro'].map((m,i)=>`<div style="padding:5px 12px;border-radius:8px;border:1px solid ${i===0?'var(--accent)':'var(--border)'};font-size:12px;cursor:pointer;color:${i===0?'var(--accent2)':'var(--text2)'};background:${i===0?'rgba(108,99,255,.18)':'var(--bg3)'}" onclick="selectModel(this,'${m}')">${m}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+      <h4 style="margin-bottom:12px">⚡ Ações</h4>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${['Aplicar/remover tags no contato','Transferir para atendente','Criar ticket categorizado','Disparar webhook externo','Enviar campanha de follow-up'].map(t=>`<div style="display:flex;gap:9px;align-items:flex-start"><div style="width:19px;height:19px;border-radius:50%;background:rgba(255,181,71,.15);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--warn);flex-shrink:0;margin-top:1px">→</div><div style="font-size:12.5px;color:var(--text2)">${t}</div></div>`).join('')}
+      </div>
+      <div style="background:rgba(62,207,142,.06);border:1px solid rgba(62,207,142,.2);border-radius:10px;padding:12px;margin-top:14px;display:flex;gap:20px">
+        ${[['67','Conversas/dia'],['14','Leads qualif.'],['3','Reuniões ag.']].map(([v,l])=>`<div><div style="font-size:22px;font-weight:800;font-family:'Outfit',sans-serif;color:var(--text)">${v}</div><div style="font-size:11px;color:var(--text3)">${l}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+    <h4 style="margin-bottom:12px">🧠 Base de Conhecimento</h4>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      ${[['📄','Upload de Arquivo','PDF · DOCX · XLSX'],['🌐','Link Externo','Site · Landing page'],['✍️','Instruções Manuais','Tom de voz · Regras']].map(([i,n,s],idx)=>`<div style="background:var(--bg3);border:1px dashed var(--border);border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:all .15s" onclick="${idx===2?"openModal('trainAI')":''}" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'"><div style="font-size:22px;margin-bottom:6px">${i}</div><div style="font-size:13px;font-weight:600;color:var(--text)">${n}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${s}</div></div>`).join('')}
+    </div>
+  </div>`;
+}
+function selectModel(el,name){document.querySelectorAll('#model-chips>div').forEach(c=>{c.style.background='var(--bg3)';c.style.color='var(--text2)';c.style.borderColor='var(--border)';});el.style.background='rgba(108,99,255,.18)';el.style.color='var(--accent2)';el.style.borderColor='var(--accent)';toast(`✦ Modelo ${name} selecionado`,'info');}
+
+// ── CONTACTS ──────────────────────────────────────────────────────
+function renderContacts(){
+  const tClr={'Follow':'tag-purple','ICP Ideal':'tag-green','MQL':'tag-blue','ICP':'tag-green','No show':'tag-red','Reunião Agendada':'tag-green'};
+  const pals=['linear-gradient(135deg,#6c63ff,#3b9eff)','linear-gradient(135deg,#3ecf8e,#2dd4bf)','linear-gradient(135deg,#ffb547,#ff9a3c)','linear-gradient(135deg,#a78bfa,#6c63ff)','linear-gradient(135deg,#ff5c7a,#d43a57)'];
+  const rows=deals.map(d=>{
+    const init=(d.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    const g=pals[(d.name||'').charCodeAt(0)%pals.length];
+    const col=COLS.find(c=>c.id===d.col);
+    return`<tr onclick="openDealDetail('${d.id}')">
+      <td><div class="td-name"><div class="avatar" style="width:28px;height:28px;font-size:10px;background:${g}">${init}</div>${d.name}</div></td>
+      <td style="font-family:'Outfit',sans-serif;font-size:12px;font-variant-numeric:tabular-nums">${d.phone||'—'}</td>
+      <td>${d.company||'—'}</td>
+      <td><span class="stage-chip" style="background:${col?.color||'#6c63ff'}18;color:${col?.color||'#6c63ff'}">${col?.title||d.col}</span></td>
+      <td>${(d.tags||[]).map(t=>`<span class="tag ${tClr[t]||'tag-purple'}" style="margin-right:3px">${t}</span>`).join('')}</td>
+      <td style="font-size:12px">${d.channel||'—'}</td>
+      <td><div class="td-actions"><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();document.getElementById('sch-contact').value='${d.name}';openModal('scheduleNew')">🗓️</button></div></td>
+    </tr>`;}).join('');
+  return`<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+    <input type="text" class="form-input" placeholder="🔍 Buscar..." style="max-width:260px" oninput="filterDealsTable(this.value)">
+    <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openModal('newContact')">+ Contato</button>
+  </div>
+  <div class="table-wrap" id="contacts-wrap"><table class="data-table"><thead><tr><th>Nome</th><th>Telefone</th><th>Empresa</th><th>Etapa</th><th>Tags</th><th>Canal</th><th>Ações</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text3)">Nenhum contato ainda</td></tr>'}</tbody></table></div>`;
+}
+function filterDealsTable(q){const tbody=document.querySelector('#contacts-wrap tbody');if(!tbody)return;const filtered=deals.filter(d=>(d.name||'').toLowerCase().includes(q.toLowerCase())||(d.company||'').toLowerCase().includes(q.toLowerCase()));const pals=['linear-gradient(135deg,#6c63ff,#3b9eff)','linear-gradient(135deg,#3ecf8e,#2dd4bf)'];tbody.innerHTML=filtered.map(d=>{const init=(d.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();const col=COLS.find(c=>c.id===d.col);return`<tr onclick="openDealDetail('${d.id}')"><td><div class="td-name"><div class="avatar" style="width:28px;height:28px;font-size:10px;background:${pals[0]}">${init}</div>${d.name}</div></td><td>${d.phone||'—'}</td><td>${d.company||'—'}</td><td><span class="stage-chip" style="background:${col?.color||'#6c63ff'}18;color:${col?.color||'#6c63ff'}">${col?.title||d.col}</span></td><td>${(d.tags||[]).join(', ')}</td><td>${d.channel||'—'}</td><td></td></tr>`}).join('');}
+async function createContact(){const name=document.getElementById('nc-name').value.trim();if(!name){toast('⚠️ Informe o nome','warn');return;}const tags=document.getElementById('nc-tags').value.split(',').map(t=>t.trim()).filter(Boolean);const newDeal={owner_id:APP.user.id,col:'entrada',name,company:document.getElementById('nc-company').value,phone:document.getElementById('nc-phone').value,channel:document.getElementById('nc-channel').value,tags,colors:['#6c63ff','#3b9eff'],age:'agora',history:[{type:'purple',text:'Contato criado',time:'agora'}]};const {data,error}=await sb.from('deals').insert(newDeal).select().single();if(error){toast('❌ Erro','error');return;}deals.unshift(data);closeModal('newContact');['nc-name','nc-company','nc-phone','nc-email','nc-tags'].forEach(id=>document.getElementById(id).value='');toast(`✓ Contato "${name}" criado!`,'success');if(APP.activeTab==='contacts')renderContent('contacts');}
+
+// ── REPORTS ───────────────────────────────────────────────────────
+function renderReports(){
+  const byCols=COLS.map(c=>deals.filter(d=>d.col===c.id).length);const max=Math.max(...byCols,1);
+  return`<div class="stats-row">
+    <div class="stat-card purple"><div class="stat-label">Total Negócios</div><div class="stat-value">${deals.length}</div></div>
+    <div class="stat-card green"><div class="stat-label">Reuniões Ag.</div><div class="stat-value">${deals.filter(d=>d.col==='reuniao').length}</div></div>
+    <div class="stat-card orange"><div class="stat-label">Conversas</div><div class="stat-value">${convos.length}</div></div>
+    <div class="stat-card blue"><div class="stat-label">Automações Ativas</div><div class="stat-value">${automations.filter(a=>a.active).length}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="rep-card"><h4>Pipeline por Etapa</h4><div class="bar-chart">${byCols.map((v,i)=>`<div class="bar-wrap"><div class="bar-val">${v}</div><div class="bar" style="height:${Math.max(v/max*100,4)}%;background:linear-gradient(180deg,${COLS[i].color},${COLS[i].color}88)"></div><div class="bar-lbl">${COLS[i].title.split('/')[0].split(' ')[0]}</div></div>`).join('')}</div></div>
+    <div class="rep-card"><h4>Canais de Origem</h4>
+      ${['📱 WhatsApp','📸 Instagram','📧 E-mail','🌐 Formulário'].map(ch=>{const n=deals.filter(d=>d.channel===ch).length;const pct=deals.length?Math.round(n/deals.length*100):0;return`<div class="prog-row"><div class="prog-label"><span>${ch}</span><strong>${n} (${pct}%)</strong></div><div class="prog-bar"><div class="prog-fill" style="width:${pct||2}%;background:var(--accent)"></div></div></div>`;}).join('')}
+    </div>
+  </div>`;
+}
+
+// ── INTEGRATIONS ──────────────────────────────────────────────────
+const INT_LIST=[{logo:'📱',name:'WhatsApp',on:true},{logo:'📸',name:'Instagram',on:true},{logo:'🗓️',name:'Google Calendar',on:true},{logo:'📧',name:'Gmail',on:true},{logo:'📊',name:'Google Sheets',on:true},{logo:'🔗',name:'Webhooks',on:true},{logo:'🛒',name:'Shopify',on:false},{logo:'🔥',name:'Hotmart',on:false},{logo:'🌿',name:'Kiwify',on:false},{logo:'⚡',name:'n8n',on:false},{logo:'🔮',name:'Make',on:false},{logo:'🔶',name:'HubSpot',on:false}];
+function renderIntegrationsTab(){return`<div class="section-header"><h3>Integrações</h3></div><p style="font-size:13px;color:var(--text2);margin-bottom:18px">Conecte suas ferramentas. Clique para configurar.</p><div class="int-grid">${INT_LIST.map((i,idx)=>`<div class="int-card ${i.on?'connected':''}" onclick="toggleInt(${idx})"><div class="int-logo">${i.logo}</div><div class="int-name">${i.name}</div><div style="font-size:11px" class="${i.on?'s-on':'s-off'}">${i.on?'● Conectado':'○ Desconectado'}</div></div>`).join('')}</div>`;}
+function toggleInt(idx){INT_LIST[idx].on=!INT_LIST[idx].on;toast(INT_LIST[idx].on?`✅ ${INT_LIST[idx].name} conectado!`:`🔌 ${INT_LIST[idx].name} desconectado`,'info');if(APP.activeTab==='integrations')renderContent('integrations');}
+
+// ── ADMIN ─────────────────────────────────────────────────────────
+function renderAdmin(){
+  return`<div class="admin-tabs">
+    <div class="admin-tab active" onclick="switchAdminTab('overview',this)">📊 Visão Geral</div>
+    <div class="admin-tab" onclick="switchAdminTab('users',this)">👥 Usuários</div>
+    <div class="admin-tab" onclick="switchAdminTab('partners',this)">🤝 Parceiros</div>
+    <div class="admin-tab" onclick="switchAdminTab('clients',this)">👤 Clientes</div>
+    <div class="admin-tab" onclick="switchAdminTab('system',this)">⚙️ Sistema</div>
+  </div>
+  <div id="admin-tab-overview" class="admin-tab-content active">${renderAdminOverview()}</div>
+  <div id="admin-tab-users" class="admin-tab-content">${renderAdminUsers()}</div>
+  <div id="admin-tab-partners" class="admin-tab-content">${renderAdminPartners()}</div>
+  <div id="admin-tab-clients" class="admin-tab-content">${renderAdminClients()}</div>
+  <div id="admin-tab-system" class="admin-tab-content">${renderAdminSystem()}</div>`;
+}
+function switchAdminTab(n,el){document.querySelectorAll('.admin-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.admin-tab-content').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('admin-tab-'+n)?.classList.add('active');}
+function renderAdminOverview(){
+  const partners=adminUsers.filter(u=>u.role==='partner');
+  const clients=adminUsers.filter(u=>u.role==='client');
+  const mrr=adminUsers.reduce((s,u)=>{const p={Básico:97,Pro:197,Enterprise:497};return s+(p[u.plan]||0);},0);
+  return`<div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card green"><div class="stat-label">MRR Total</div><div class="stat-value" style="font-size:22px">R$${mrr.toLocaleString('pt-BR')}</div><div class="stat-sub">mensal recorrente</div></div>
+    <div class="stat-card blue"><div class="stat-label">Parceiros</div><div class="stat-value">${partners.filter(p=>p.status==='active').length}</div><div class="stat-sub">${partners.length} total</div></div>
+    <div class="stat-card purple"><div class="stat-label">Clientes</div><div class="stat-value">${clients.filter(c=>c.status==='active').length}</div><div class="stat-sub">${clients.length} total</div></div>
+    <div class="stat-card orange"><div class="stat-label">Total Usuários</div><div class="stat-value">${adminUsers.length}</div><div class="stat-sub">na plataforma</div></div>
+  </div>
+  <div class="rep-card"><h4>Usuários Recentes</h4>
+    ${adminUsers.slice(0,5).map(u=>`<div class="user-row-card">
+      <div class="avatar" style="background:${u.role==='admin'?'linear-gradient(135deg,#ff5c7a,#6c63ff)':u.role==='partner'?'linear-gradient(135deg,#ffb547,#ff9a3c)':'linear-gradient(135deg,#3ecf8e,#3b9eff)'}">${(u.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div>
+      <div style="flex:1"><strong style="display:block;font-size:13px;font-weight:700;color:var(--text)">${u.name}</strong><span style="font-size:12px;color:var(--text3)">${u.email} · ${u.company||'—'}</span></div>
+      <span class="role-badge role-${u.role}">${u.role==='admin'?'Admin':u.role==='partner'?'Parceiro':'Cliente'}</span>
+      <span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${u.status==='active'?'rgba(62,207,142,.15)':'rgba(255,92,122,.15)'};color:${u.status==='active'?'var(--green)':'var(--danger)'}">${u.status==='active'?'Ativo':'Inativo'}</span>
+    </div>`).join('') || '<div class="empty-state"><div class="ei">👥</div>Nenhum usuário ainda</div>'}
+  </div>`;
+}
+function renderAdminUsers(){
+  return`<div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+    <input type="text" class="form-input" placeholder="🔍 Buscar..." style="max-width:260px" oninput="filterAdminUsers(this.value)">
+    <select class="form-input" style="max-width:140px" onchange="filterAdminByRole(this.value)"><option value="">Todos</option><option value="admin">Admin</option><option value="partner">Parceiro</option><option value="client">Cliente</option></select>
+    <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openModal('addUser')">+ Usuário</button>
+  </div>
+  <div class="table-wrap"><table class="data-table" id="admin-users-table"><thead><tr><th>Usuário</th><th>Role</th><th>Plano</th><th>Empresa</th><th>Status</th><th>Ações</th></tr></thead><tbody>${renderUserRows(adminUsers)}</tbody></table></div>`;
+}
+function renderUserRows(list){return list.map(u=>`<tr>
+  <td><div class="td-name"><div class="avatar" style="width:28px;height:28px;font-size:10px;background:${u.role==='admin'?'linear-gradient(135deg,#ff5c7a,#6c63ff)':u.role==='partner'?'linear-gradient(135deg,#ffb547,#ff9a3c)':'linear-gradient(135deg,#3ecf8e,#3b9eff)'}">${(u.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div><div>${u.name||'—'}<br><span style="font-size:11px;color:var(--text3)">${u.email}</span></div></div></td>
+  <td><span class="role-badge role-${u.role}">${u.role==='admin'?'Admin':u.role==='partner'?'Parceiro':'Cliente'}</span></td>
+  <td style="font-size:12px;font-weight:600;color:var(--text2)">${u.plan||'—'}</td>
+  <td style="font-size:12px">${u.company||'—'}</td>
+  <td><span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${u.status==='active'?'rgba(62,207,142,.15)':'rgba(255,92,122,.15)'};color:${u.status==='active'?'var(--green)':'var(--danger)'}">${u.status==='active'?'Ativo':'Inativo'}</span></td>
+  <td><div class="td-actions">
+    ${u.email!==ADMIN_EMAIL?`<button class="btn btn-ghost btn-xs" onclick="changeUserRole('${u.id}','${u.role}')">Mudar Role</button><button class="btn btn-danger btn-xs" onclick="toggleUserStatus('${u.id}','${u.status}')">🚫</button>`:'<span style="font-size:11px;color:var(--text3)">Admin principal</span>'}
+  </div></td>
+</tr>`).join('');}
+function filterAdminUsers(q){const tbody=document.querySelector('#admin-users-table tbody');if(tbody)tbody.innerHTML=renderUserRows(adminUsers.filter(u=>(u.name||'').toLowerCase().includes(q.toLowerCase())||(u.email||'').toLowerCase().includes(q.toLowerCase())));}
+function filterAdminByRole(r){const tbody=document.querySelector('#admin-users-table tbody');if(tbody)tbody.innerHTML=renderUserRows(r?adminUsers.filter(u=>u.role===r):adminUsers);}
+async function changeUserRole(id,currentRole){
+  const roles=['client','partner'];const next=currentRole==='client'?'partner':'client';
+  const {error}=await sb.from('profiles').update({role:next}).eq('id',id);
+  if(error){toast('❌ Erro ao alterar role','error');return;}
+  const u=adminUsers.find(x=>x.id===id);if(u)u.role=next;
+  toast(`✅ Role alterado para ${next}`,'success');renderContent('admin');
+}
+async function toggleUserStatus(id,current){
+  const newStatus=current==='active'?'inactive':'active';
+  const {error}=await sb.from('profiles').update({status:newStatus}).eq('id',id);
+  if(error){toast('❌ Erro','error');return;}
+  const u=adminUsers.find(x=>x.id===id);if(u)u.status=newStatus;
+  toast(`${newStatus==='active'?'✅ Ativado':'🚫 Desativado'}`,'info');renderContent('admin');
+}
+async function adminCreateUser(){
+  const name=document.getElementById('au-name').value.trim();const email=document.getElementById('au-email').value.trim();if(!name||!email){toast('⚠️ Nome e e-mail obrigatórios','warn');return;}
+  const role=document.getElementById('au-role').value;const plan=document.getElementById('au-plan').value.split('—')[0].trim();const company=document.getElementById('au-company').value;
+  // create user via supabase admin (invite)
+  const { error } = await sb.auth.admin?.inviteUserByEmail?.(email, {data:{name,company}}).catch(()=>({error:{message:'Admin API not available in browser'}})) || {error:null};
+  // fallback: just create profile entry for display
+  const newProfile={id:crypto.randomUUID(),name,email,role,plan,company,status:'active'};
+  adminUsers.unshift(newProfile);
+  closeModal('addUser');['au-name','au-email','au-company'].forEach(id=>document.getElementById(id).value='');
+  toast(`✅ Usuário "${name}" adicionado! Envie o link de cadastro para ${email}`,'success');renderContent('admin');
+}
+function renderAdminPartners(){
+  const partners=adminUsers.filter(u=>u.role==='partner');
+  return`<div style="display:flex;justify-content:space-between;margin-bottom:16px;align-items:center"><h4 style="font-size:15px;font-weight:700;color:var(--text)">Parceiros (${partners.length})</h4><button class="btn btn-primary btn-sm" onclick="document.getElementById('au-role').value='partner';openModal('addUser')">+ Parceiro</button></div>
+  ${partners.length?partners.map(p=>`<div class="user-row-card">
+    <div class="avatar" style="background:linear-gradient(135deg,#ffb547,#ff9a3c)">${(p.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div>
+    <div style="flex:1"><strong style="display:block;font-size:13px;font-weight:700;color:var(--text)">${p.name}</strong><span style="font-size:12px;color:var(--text3)">${p.email} · ${p.company||'—'} · Plano ${p.plan||'—'}</span></div>
+    <span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${p.status==='active'?'rgba(62,207,142,.15)':'rgba(255,92,122,.15)'};color:${p.status==='active'?'var(--green)':'var(--danger)'}">${p.status==='active'?'Ativo':'Inativo'}</span>
+    <button class="btn btn-ghost btn-xs" onclick="changeUserRole('${p.id}','${p.role}')">Mudar Role</button>
+    <button class="btn btn-danger btn-xs" onclick="toggleUserStatus('${p.id}','${p.status}')">🚫</button>
+  </div>`).join(''):'<div class="empty-state"><div class="ei">🤝</div>Nenhum parceiro ainda</div>'}`;
+}
+function renderAdminClients(){
+  const clients=adminUsers.filter(u=>u.role==='client');
+  return`<div style="display:flex;justify-content:space-between;margin-bottom:16px;align-items:center"><h4 style="font-size:15px;font-weight:700;color:var(--text)">Clientes (${clients.length})</h4><button class="btn btn-primary btn-sm" onclick="document.getElementById('au-role').value='client';openModal('addUser')">+ Cliente</button></div>
+  ${clients.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Cliente</th><th>Plano</th><th>Empresa</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+  ${clients.map(c=>`<tr><td><div class="td-name"><div class="avatar" style="width:28px;height:28px;font-size:10px;background:linear-gradient(135deg,#3ecf8e,#3b9eff)">${(c.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div><div>${c.name}<br><span style="font-size:11px;color:var(--text3)">${c.email}</span></div></div></td><td style="font-size:12px">${c.plan||'—'}</td><td style="font-size:12px">${c.company||'—'}</td><td><span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${c.status==='active'?'rgba(62,207,142,.15)':'rgba(255,92,122,.15)'};color:${c.status==='active'?'var(--green)':'var(--danger)'}">${c.status==='active'?'Ativo':'Inativo'}</span></td><td><div class="td-actions"><button class="btn btn-ghost btn-xs" onclick="changeUserRole('${c.id}','${c.role}')">Mudar Role</button><button class="btn btn-danger btn-xs" onclick="toggleUserStatus('${c.id}','${c.status}')">🚫</button></div></td></tr>`).join('')}
+  </tbody></table></div>`:'<div class="empty-state"><div class="ei">👤</div>Nenhum cliente ainda</div>'}`;
+}
+function renderAdminSystem(){
+  return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="rep-card"><h4>⚙️ Configurações Globais</h4>
+      ${[['Confirmação de e-mail no cadastro',false],['Logs de auditoria',true],['Rate limit IA',true],['Modo manutenção',false]].map(([n,v])=>`<div class="toggle-row"><div class="toggle-row-info"><strong>${n}</strong></div><label class="toggle"><input type="checkbox" ${v?'checked':''} onchange="toast('⚙️ ${n} ${v?'desa':'a'}tivado','info')"><span class="toggle-slider"></span></label></div>`).join('')}
+    </div>
+    <div class="rep-card"><h4>📊 Configurações de Planos</h4>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${[['Básico','R$97/mês','1 usuário · 500 contatos'],['Pro','R$197/mês','5 usuários · 5k contatos · IA'],['Enterprise','R$497/mês','Ilimitado · IA Avançada']].map(([n,p,d])=>`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:12px;display:flex;align-items:center;gap:12px"><div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${n}</div><div style="font-size:11px;color:var(--text3)">${d}</div></div><div style="font-size:14px;font-weight:800;font-family:'Outfit',sans-serif;color:var(--green)">${p}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── PARTNER CLIENTS ───────────────────────────────────────────────
+function renderPartnerClients(){
+  const mrr=partnerClients.reduce((s,c)=>{const p={Básico:97,Pro:197,Enterprise:497};return s+(p[c.plan]||97);},0);
+  return`<div class="section-header"><h3>Meus Clientes</h3>
+    <div style="display:flex;gap:8px;align-items:center"><span style="font-size:13px;color:var(--text3)">${partnerClients.length} clientes · MRR: <strong style="color:var(--green)">R$${mrr.toLocaleString('pt-BR')}</strong></span><button class="btn btn-primary btn-sm" onclick="openModal('addPartnerClient')">+ Cliente</button></div>
+  </div>
+  <div class="notif-banner"><div class="nb-icon">🤝</div><div class="nb-text"><h4>Painel de Parceiro</h4><p>Gerencie todos os seus clientes em um só lugar.</p></div></div>
+  <div class="stats-row c3">
+    <div class="stat-card green"><div class="stat-label">Clientes Ativos</div><div class="stat-value">${partnerClients.filter(c=>c.status==='active').length}</div></div>
+    <div class="stat-card purple"><div class="stat-label">MRR</div><div class="stat-value" style="font-size:20px">R$${mrr.toLocaleString('pt-BR')}</div></div>
+    <div class="stat-card blue"><div class="stat-label">Total</div><div class="stat-value">${partnerClients.length}</div></div>
+  </div>
+  ${partnerClients.length?partnerClients.map(c=>`<div class="partner-client-card">
+    <div class="pcc-header"><div class="avatar" style="background:linear-gradient(135deg,#3ecf8e,#3b9eff)">${(c.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div><div class="pcc-name">${c.name}</div><span class="stage-chip" style="background:rgba(108,99,255,.15);color:var(--accent2)">${c.plan||'—'}</span><span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${c.status==='active'?'rgba(62,207,142,.15)':'rgba(255,92,122,.15)'};color:${c.status==='active'?'var(--green)':'var(--danger)'}">${c.status==='active'?'Ativo':'Inativo'}</span></div>
+    <div class="pcc-stats"><div class="pcc-stat"><span class="v">${c.email||'—'}</span>E-mail</div><div style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-ghost btn-xs" onclick="toast('📊 CRM de ${c.name}','info')">📊 CRM</button><button class="btn btn-ghost btn-xs" onclick="toast('💬 Chat de ${c.name}','info')">💬 Chat</button></div></div>
+  </div>`).join(''):'<div class="empty-state"><div class="ei">🏢</div>Nenhum cliente ainda<br><br><button class="btn btn-primary btn-sm" onclick="openModal(\'addPartnerClient\')">+ Adicionar Cliente</button></div>'}`;
+}
+async function savePartnerClient(){
+  const name=document.getElementById('pc-name').value.trim();if(!name){toast('⚠️ Informe o nome','warn');return;}
+  const plan=document.getElementById('pc-plan').value.split('—')[0].trim();
+  const newClient={id:crypto.randomUUID(),name,email:document.getElementById('pc-email').value,plan,status:'active',partner_id:APP.user.id};
+  partnerClients.unshift(newClient);
+  closeModal('addPartnerClient');['pc-name','pc-contact','pc-email'].forEach(id=>document.getElementById(id)&&(document.getElementById(id).value=''));
+  toast(`✅ Cliente "${name}" adicionado!`,'success');renderContent('partner-clients');
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────
+function renderSettings(){
+  return`<div class="settings-layout">
+    <div class="settings-nav">
+      ${[['👤','profile','Meu Perfil'],['🔔','notifications','Notificações'],['🎨','appearance','Aparência'],['💳','billing','Plano'],['🔐','security','Segurança'],['🔌','api','API & Webhooks']].map(([i,id,l])=>`<div class="settings-nav-item ${APP.settingsTab===id?'active':''}" onclick="switchSettingsTab('${id}',this)">${i} ${l}</div>`).join('')}
+    </div>
+    <div class="settings-panel" id="settings-panel">${renderSettingsPanel(APP.settingsTab)}</div>
+  </div>`;
+}
+function switchSettingsTab(tab,el){APP.settingsTab=tab;document.querySelectorAll('.settings-nav-item').forEach(i=>i.classList.remove('active'));el.classList.add('active');document.getElementById('settings-panel').innerHTML=renderSettingsPanel(tab);}
+function renderSettingsPanel(tab){
+  const p=APP.profile||{};
+  if(tab==='profile')return`<h3>Meu Perfil</h3><p>Gerencie suas informações pessoais</p>
+    <div class="settings-section"><h4>Informações</h4>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+        <div class="avatar" style="width:60px;height:60px;font-size:20px;background:linear-gradient(135deg,var(--accent),var(--green))">${(p.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div>
+        <button class="btn btn-ghost btn-sm" onclick="toast('📷 Upload de foto em breve','info')">Alterar foto</button>
+      </div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="prof-name" value="${p.name||''}"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" value="${p.email||''}" readonly style="opacity:.6"></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Empresa</label><input class="form-input" id="prof-company" value="${p.company||''}"></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" id="prof-phone" value="${p.phone||''}" placeholder="+55 11 9 0000-0000"></div></div>
+      <button class="btn btn-primary btn-sm" onclick="saveProfile()">Salvar Perfil</button>
+    </div>`;
+  if(tab==='notifications')return`<h3>Notificações</h3><p>Configure quando ser notificado</p>
+    <div class="settings-section"><h4>E-mail & WhatsApp</h4>
+      ${[['Novo lead qualificado pela IA',true],['Reunião confirmada via WhatsApp',true],['Lead parado há mais de 3 dias',false],['Relatório semanal',true]].map(([n,v])=>`<div class="toggle-row"><div class="toggle-row-info"><strong>${n}</strong></div><label class="toggle"><input type="checkbox" ${v?'checked':''} onchange="toast('🔔 Preferência salva','info')"><span class="toggle-slider"></span></label></div>`).join('')}
+    </div>`;
+  if(tab==='appearance')return`<h3>Aparência</h3><p>Personalize a interface</p>
+    <div class="settings-section"><h4>Cor de Destaque</h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        ${[['#6c63ff','Índigo'],['#3ecf8e','Verde'],['#3b9eff','Azul'],['#ff5c7a','Rosa'],['#ffb547','Laranja'],['#a78bfa','Roxo']].map(([c,n])=>`<div class="color-swatch ${APP.accentColor===c?'active':''}" style="background:${c}" title="${n}" onclick="changeAccent('${c}')"></div>`).join('')}
+      </div>
+    </div>
+    <div class="settings-section"><h4>Layout</h4>
+      ${[['Animações de interface',true],['Modo compacto',false]].map(([n,v])=>`<div class="toggle-row"><div class="toggle-row-info"><strong>${n}</strong></div><label class="toggle"><input type="checkbox" ${v?'checked':''} onchange="toast('🎨 Salvo','info')"><span class="toggle-slider"></span></label></div>`).join('')}
+    </div>`;
+  if(tab==='billing')return`<h3>Plano & Cobrança</h3><p>Gerencie sua assinatura</p>
+    <div class="settings-section"><h4>Plano Atual: <span style="color:var(--accent2)">${p.plan||'Básico'}</span></h4>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px">
+        ${[['Básico','R$97',['CRM','1 Usuário','500 Contatos'],p.plan==='Básico'],['Pro','R$197',['CRM + IA','5 Usuários','5k Contatos'],p.plan==='Pro'],['Enterprise','R$497',['Ilimitado','IA Avançada','API'],p.plan==='Enterprise']].map(([n,pr,f,curr])=>`<div style="background:var(--bg3);border:1px solid ${curr?'var(--accent)':'var(--border)'};border-radius:12px;padding:14px;text-align:center"><div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px">${n}</div><div style="font-size:20px;font-weight:800;font-family:'Outfit',sans-serif;color:var(--accent2)">${pr}<span style="font-size:12px;color:var(--text3);font-weight:400">/mês</span></div><div style="text-align:left;margin:10px 0">${f.map(ft=>`<div style="font-size:12px;color:var(--text2);display:flex;gap:6px;margin-bottom:4px"><span style="color:var(--green)">✓</span>${ft}</div>`).join('')}</div><button class="btn ${curr?'btn-ghost':'btn-primary'} btn-sm" style="width:100%;justify-content:center" onclick="toast('${curr?'✅ Plano atual':'💳 Redirecionando...'}','${curr?'info':'success'}')">${curr?'Plano Atual':'Assinar'}</button></div>`).join('')}
+      </div>
+    </div>`;
+  if(tab==='security')return`<h3>Segurança</h3><p>Proteja sua conta</p>
+    <div class="settings-section"><h4>Alterar Senha</h4>
+      <div class="form-group"><label class="form-label">Nova Senha</label><input type="password" class="form-input" id="new-pass" placeholder="Mínimo 6 caracteres"></div>
+      <div class="form-group"><label class="form-label">Confirmar Senha</label><input type="password" class="form-input" id="confirm-pass" placeholder="Repita a senha"></div>
+      <button class="btn btn-primary btn-sm" onclick="changePassword()">Alterar Senha</button>
+    </div>
+    <div class="settings-section"><h4>Sessão</h4>
+      <button class="btn btn-danger btn-sm" onclick="doLogout()">🚪 Encerrar todas as sessões e sair</button>
+    </div>`;
+  if(tab==='api')return`<h3>API & Webhooks</h3><p>Integre com sistemas externos</p>
+    <div class="settings-section"><h4>Chave de API</h4>
+      <div style="display:flex;gap:8px;align-items:center"><input type="text" class="form-input" value="fcrm_${APP.user?.id?.slice(0,8)||'xxxxxxxx'}••••••••" readonly><button class="btn btn-ghost btn-sm" onclick="toast('📋 Chave copiada!','success')">Copiar</button></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:8px">Nunca compartilhe sua chave de API.</div>
+    </div>
+    <div class="settings-section"><h4>Webhook URL</h4>
+      <div class="form-group"><input type="text" class="form-input" placeholder="https://seusite.com/webhook"></div>
+      <button class="btn btn-primary btn-sm" onclick="toast('✅ Webhook salvo!','success')">Salvar</button>
+    </div>`;
+  return '<div class="empty-state"><div class="ei">🚧</div>Em construção</div>';
+}
+async function saveProfile(){
+  const name=document.getElementById('prof-name')?.value.trim();
+  const company=document.getElementById('prof-company')?.value.trim();
+  const phone=document.getElementById('prof-phone')?.value.trim();
+  const updates={};if(name)updates.name=name;if(company!==undefined)updates.company=company;if(phone!==undefined)updates.phone=phone;
+  const {error}=await sb.from('profiles').update(updates).eq('id',APP.user.id);
+  if(error){toast('❌ Erro ao salvar','error');return;}
+  if(name){APP.profile.name=name;document.getElementById('user-name').textContent=name;}
+  if(company)APP.profile.company=company;
+  toast('✅ Perfil salvo!','success');
+}
+async function changePassword(){
+  const np=document.getElementById('new-pass')?.value;const cp=document.getElementById('confirm-pass')?.value;
+  if(!np||np.length<6){toast('⚠️ Senha deve ter pelo menos 6 caracteres','warn');return;}
+  if(np!==cp){toast('⚠️ Senhas não coincidem','warn');return;}
+  const {error}=await sb.auth.updateUser({password:np});
+  if(error){toast('❌ Erro: '+error.message,'error');return;}
+  toast('🔐 Senha alterada com sucesso!','success');
+}
+function changeAccent(color){APP.accentColor=color;document.documentElement.style.setProperty('--accent',color);document.querySelectorAll('.color-swatch').forEach(s=>{s.classList.toggle('active',s.style.background===color);});toast('🎨 Cor alterada!','info');}
+
+// ── MISC ──────────────────────────────────────────────────────────
+function addActivity(icon,text){activities.unshift({icon,text,time:'agora'});}
+function createTicket(){const subj=document.getElementById('tk-subject')?.value.trim();if(!subj){toast('⚠️ Informe o assunto','warn');return;}closeModal('newTicket');toast(`🎫 Ticket "${subj}" aberto!`,'success');}
+function globalSearch(q){if(q.length<2)return;const r=deals.filter(d=>(d.name||'').toLowerCase().includes(q.toLowerCase())||(d.company||'').toLowerCase().includes(q.toLowerCase()));if(r.length)toast(`🔍 ${r.length} resultado(s) — veja CRM ou Contatos`,'info');}
+function toggleUserMenu(){document.getElementById('user-menu').classList.toggle('open');}
+function closeUserMenu(){document.getElementById('user-menu').classList.remove('open');}
+document.addEventListener('click',e=>{const p=document.getElementById('user-pill');const m=document.getElementById('user-menu');if(m&&p&&!p.contains(e.target)&&!m.contains(e.target))closeUserMenu();});
+document.querySelectorAll('.modal-overlay').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));closeUserMenu();}if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();document.querySelector('.topbar-search input')?.focus();}});
+document.getElementById('sch-date').value=new Date().toISOString().split('T')[0];
+
+// ── TOAST & MODAL ─────────────────────────────────────────────────
+function toast(msg,type='info'){const c=document.getElementById('toasts');const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';},3200);setTimeout(()=>t.remove(),3600);}
+function openModal(id){document.getElementById('modal-'+id)?.classList.add('open');}
+function closeModal(id){document.getElementById('modal-'+id)?.classList.remove('open');}
+
+// ── START ─────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
