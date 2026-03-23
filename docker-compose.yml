@@ -9,10 +9,9 @@ services:
       - ./html:/usr/share/nginx/html:ro
     networks:
       - Vizionsnet
-      - traefik_proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik_proxy"
+      - "traefik.docker.network=Vizionsnet"
 
       # HTTP -> redireciona pra HTTPS
       - "traefik.http.routers.flowcrm.entrypoints=web"
@@ -32,6 +31,4 @@ services:
 
 networks:
   Vizionsnet:
-    external: true
-  traefik_proxy:
     external: true
