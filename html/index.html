@@ -549,8 +549,7 @@ const ADMIN_EMAIL   = 'vallelukas@outlook.com.br'; // único e-mail com role adm
 // ════════════════════════════════════════════════════════════════
 
 // ── Verifica se as credenciais foram configuradas ─────────────────
-const CONFIGURED = SUPABASE_URL !== 'https://pcgcktamqrabuyjmkdxf.supabase.co' && SUPABASE_ANON !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjZ2NrdGFtcXJhYnV5am1rZHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxOTMxNTYsImV4cCI6MjA4OTc2OTE1Nn0.TxPVdQbuRzHqaT5CymEdgDYqlZ6ync0jt576ju1EFfw'
-  && SUPABASE_URL.startsWith('https://') && SUPABASE_ANON.startsWith('eyJ');
+const CONFIGURED = SUPABASE_URL.startsWith('https://') && SUPABASE_ANON.startsWith('eyJ');
 
 if (!CONFIGURED) {
   // Mostra tela de configuração e para tudo
