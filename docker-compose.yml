@@ -1,10 +1,11 @@
-﻿version: "3.8"
+version: "3.8"
 
 services:
   flowcrm:
-    build: .
-    container_name: flowcrm
-    restart: unless-stopped
+    image: ghcr.io/lukasmanakel/flowcrm:latest
+    deploy:
+      restart_policy:
+        condition: any
     networks:
       - Vizionsnet
     labels:
